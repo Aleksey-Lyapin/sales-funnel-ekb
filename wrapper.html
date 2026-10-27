@@ -56,6 +56,12 @@
       resetParams() { params = Object.assign({}, DEFAULTS); run(); },
       setLink() {},
       refresh() {},
+      // Used by the live updater below: swap in fresh data and redraw.
+      _setSource(src) {
+        window.SRC = src;
+        Object.keys(cache).forEach((k) => delete cache[k]);
+        run();
+      },
     };
     document.addEventListener('DOMContentLoaded', () => { ready = true; run(); });
     let t;
@@ -69,16 +75,56 @@
 </div>
 <script>
   (function () {
-    const at = new Date(window.SRC.builtAt);
     const pad = (n) => String(n).padStart(2, '0');
-    const s = pad(at.getDate()) + '.' + pad(at.getMonth() + 1) + '.' + at.getFullYear() + ' ' + pad(at.getHours()) + ':' + pad(at.getMinutes());
-    const eb = document.querySelector('.vf-eyebrow');
-    if (eb) {
-      const u = document.createElement('span');
-      u.className = 'vf-updated';
+    const stamp = () => {
+      const at = new Date(window.SRC.builtAt);
+      const s = pad(at.getDate()) + '.' + pad(at.getMonth() + 1) + '.' + at.getFullYear() + ' ' + pad(at.getHours()) + ':' + pad(at.getMinutes());
+      let u = document.querySelector('.vf-updated');
+      if (!u) {
+        const eb = document.querySelector('.vf-eyebrow');
+        if (!eb) return;
+        u = document.createElement('span');
+        u.className = 'vf-updated';
+        eb.after(u);
+      }
       u.textContent = 'Данные обновлены ' + s;
-      eb.after(u);
-    }
+    };
+    stamp();
+
+    // Live updates: GitHub Pages lets browsers cache index.html for 10 minutes, so the page
+    // checks data-hash.txt itself (on open, every 30 s and when the tab is shown again)
+    // and pulls data.json when the sheet has changed.
+    const bust = () => '?t=' + Date.now();
+    let busy = false;
+    const check = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        const r = await fetch('data-hash.txt' + bust(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const hash = (await r.text()).trim();
+        if (!hash || hash === window.SRC.hash) return;
+        const src = await (await fetch('data.json' + bust(), { cache: 'no-store' })).json();
+        let reloaded = null;
+        try { reloaded = sessionStorage.getItem('vf-reloaded'); } catch (e) {}
+        if (src.pageHash !== window.SRC.pageHash && reloaded !== src.pageHash) {
+          // The page itself changed: refresh the cached copy, then reload (once per version).
+          try { sessionStorage.setItem('vf-reloaded', src.pageHash); } catch (e) {}
+          await fetch(location.pathname, { cache: 'reload' });
+          location.reload();
+          return;
+        }
+        window.dash._setSource(src);
+        stamp();
+      } catch (e) {
+        console.warn('Проверка обновлений не удалась', e);
+      } finally {
+        busy = false;
+      }
+    };
+    check();
+    setInterval(check, 30000);
+    document.addEventListener('visibilitychange', check);
   })();
 </script>
 </body>

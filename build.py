@@ -41,6 +41,7 @@ sources = {
 
 page = (root / "page.html").read_text(encoding="utf-8")
 wrapper = (root / "wrapper.html").read_text(encoding="utf-8")
+page_hash = hashlib.sha256(page.encode() + wrapper.encode()).hexdigest()
 digest = hashlib.sha256(json.dumps(sources, ensure_ascii=False, sort_keys=True).encode()
                         + page.encode() + wrapper.encode()).hexdigest()
 
@@ -53,13 +54,15 @@ changed = live != digest or os.environ.get("FORCE") == "true"
 print("hash", digest, "live", live or "-", "changed", changed)
 
 built = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
-data = json.dumps({"builtAt": built, "sources": sources}, ensure_ascii=False, separators=(",", ":"))
-data = data.replace("</", "<\\/")
-html = wrapper.replace("/*__PAGE__*/", page, 1).replace("/*__DATA__*/", data, 1)
+data = json.dumps({"builtAt": built, "hash": digest, "pageHash": page_hash, "sources": sources},
+                  ensure_ascii=False, separators=(",", ":"))
+# The same data is embedded for the first paint and served as data.json for live updates.
+html = wrapper.replace("/*__PAGE__*/", page, 1).replace("/*__DATA__*/", data.replace("</", "<\\/"), 1)
 
 site = root / "site"
 site.mkdir(exist_ok=True)
 (site / "index.html").write_text(html, encoding="utf-8")
+(site / "data.json").write_text(data, encoding="utf-8")
 (site / "data-hash.txt").write_text(digest, encoding="utf-8")
 (site / ".nojekyll").write_text("", encoding="utf-8")
 print("site/index.html", len(html.encode()), "bytes")
