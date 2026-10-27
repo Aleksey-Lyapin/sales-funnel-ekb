@@ -1,0 +1,64 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Опубликовать, даже если данные не изменились"
+        type: boolean
+        default: false
+  # Sent by the Apps Script trigger in the spreadsheet a minute after an edit
+  repository_dispatch:
+    types: [sheet-changed]
+  # Fallback in case a trigger is missed
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+  actions: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.build.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet google-auth requests
+      - id: build
+        env:
+          GOOGLE_SA_KEY: ${{ secrets.GOOGLE_SA_KEY }}
+          FORCE: ${{ github.event_name == 'push' || inputs.force == true }}
+        run: python build.py
+      # GitHub switches off schedules after 60 days without commits; re-enabling resets that
+      - if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT repos/${{ github.repository }}/actions/workflows/build.yml/enable || true
+      - if: steps.build.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

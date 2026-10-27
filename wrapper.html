@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Воронка продаж ЕКБ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Unbounded:wght@600&display=swap">
+<style>
+  :root { --cds-dur-slow: .3s; }
+  html, body { margin: 0; background: #F5F8FB; }
+  .dash-skeleton { color: transparent !important; background: #EDF6FF; border-radius: 8px; }
+  .vf-updated { font-size: 12px; color: #6C8DAF; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+  // Data fetched from Google Sheets by the build (same shape as the Sheets connector's answers).
+  window.SRC = /*__DATA__*/;
+</script>
+<script>
+  // Minimal stand-in for the claude.ai dashboard runtime, so page.html runs unchanged here.
+  (function () {
+    const loaders = {}, calcs = {}, cache = {}, subs = [];
+    const DEFAULTS = { proj: 'all' };
+    let params = Object.assign({}, DEFAULTS);
+    let ready = false;
+    const resolve = (id) => {
+      if (id in cache) return cache[id];
+      let v;
+      if (calcs[id]) {
+        v = calcs[id].fn(...calcs[id].inputs.map(resolve));
+      } else {
+        const s = window.SRC.sources[id];
+        if (!s) throw new Error('Нет источника ' + id);
+        const r = loaders[id] ? loaders[id]({ answer: s.answer, args: s.args }) : s.answer;
+        v = Array.isArray(r) ? r : (r.rows || r.data || []);
+      }
+      cache[id] = v;
+      return v;
+    };
+    const run = () => { if (ready) subs.forEach((f) => { try { f(); } catch (e) { console.error(e); } }); };
+    window.dash = {
+      colors: ['#002346', '#E20617', '#6C8DAF', '#3E5C7C', '#BFD4E8', '#B50C20', '#1D4166', '#355E8E'],
+      loader(id, o) { loaders[id] = o.fn; },
+      calc(id, o) { calcs[id] = o; },
+      data(id) {
+        try { return { status: 'ok', data: resolve(id), meta: [] }; }
+        catch (e) { console.error(e); return { status: 'error', data: [], message: String(e), meta: [] }; }
+      },
+      onData(fn) { subs.push(fn); if (ready) fn(); },
+      params() { return Object.assign({}, params); },
+      setParams(p) { params = Object.assign({}, params, p); run(); },
+      resetParams() { params = Object.assign({}, DEFAULTS); run(); },
+      setLink() {},
+      refresh() {},
+    };
+    document.addEventListener('DOMContentLoaded', () => { ready = true; run(); });
+    let t;
+    addEventListener('resize', () => { clearTimeout(t); t = setTimeout(run, 150); });
+  })();
+</script>
+</head>
+<body>
+<div id="dash-root">
+/*__PAGE__*/
+</div>
+<script>
+  (function () {
+    const at = new Date(window.SRC.builtAt);
+    const pad = (n) => String(n).padStart(2, '0');
+    const s = pad(at.getDate()) + '.' + pad(at.getMonth() + 1) + '.' + at.getFullYear() + ' ' + pad(at.getHours()) + ':' + pad(at.getMinutes());
+    const eb = document.querySelector('.vf-eyebrow');
+    if (eb) {
+      const u = document.createElement('span');
+      u.className = 'vf-updated';
+      u.textContent = 'Данные обновлены ' + s;
+      eb.after(u);
+    }
+  })();
+</script>
+</body>
+</html>

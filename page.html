@@ -1,0 +1,729 @@
+<style>
+  /* Layout: white brand band (BAZA mark, title, project tabs), filter card, KPI strip, ДДУ and ПИФ rows of three funnel cards, project table, monthly chart.
+     Palette follows baza.bz: navy ink on pale blue ground, white 20px cards, brand red for accents. Single light look on purpose, as on baza.bz. */
+  #dash-root { --dash-gutter: 0; }
+  .vf {
+    --bg: #F5F8FB; --surface: #FFFFFF; --surface-2: #EDF6FF;
+    --ink: #002346; --ink-2: #3E5C7C; --muted: #6C8DAF;
+    --line: #D8E6F4; --line-strong: #BFD4E8;
+    --red: #E20617; --red-hover: #B50C20;
+    --warn: #B86E00;
+    --shadow: 0 0 16px 0 rgba(0,35,70,.10);
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-display: "Unbounded", "Inter", system-ui, sans-serif;
+    --radius: 20px;
+    color-scheme: light;
+    background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+    display: flex; flex-direction: column; gap: 20px;
+    padding-block: 0 40px;
+  }
+  .vf *, .vf *::before, .vf *::after { box-sizing: border-box; }
+  .vf-in { width: 100%; max-width: 1320px; margin-inline: auto; padding-inline: max(16px, 2vw); display: flex; flex-direction: column; gap: 20px; }
+  .vf-band { background: var(--surface); box-shadow: 0 4px 16px rgba(0,35,70,.06); }
+  .vf-band .vf-in { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-block: 14px; }
+  .vf-brand { display: flex; gap: 16px; align-items: center; min-width: 0; }
+  .vf-logo { width: 64px; height: 47px; flex: none; display: block; }
+  .vf-logo svg { width: 100%; height: 100%; display: block; }
+  .vf-brand-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-left: 16px; border-left: 1px solid var(--line); }
+  .vf-eyebrow { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .vf-title { font-family: var(--font-display); font-weight: 600; font-size: 20px; margin: 0; letter-spacing: -.01em; text-wrap: balance; color: var(--ink); }
+  .vf-proj-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .vf-tab { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-weight: 500; padding: 10px 18px; border-radius: 100px; cursor: pointer; transition: background-color .15s, border-color .15s; }
+  .vf-tab:hover { background: var(--bg); }
+  .vf-tab[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #FFFFFF; }
+  .vf-tab[aria-pressed="true"]:hover { background: var(--red-hover); }
+  .vf-take { margin: 0; font-size: 13px; color: var(--ink-2); padding: 10px 16px; background: var(--surface-2); border-radius: 12px; }
+  .vf-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 22px; padding: 18px 20px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .vf-fgroup { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .vf-flabel { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .vf-dates { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--muted); }
+  .vf-dates input { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 100px; padding: 6px 12px; }
+  .vf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .vf-chip { appearance: none; font: inherit; font-size: 13px; font-weight: 500; padding: 7px 14px; border-radius: 100px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; transition: background-color .15s, border-color .15s; }
+  .vf-chip:hover { background: var(--bg); border-color: var(--line-strong); }
+  .vf-chip[aria-pressed="true"] { background: var(--ink); color: #FFFFFF; border-color: var(--ink); }
+  .vf-reset { margin-left: auto; appearance: none; border: 0; background: none; color: var(--red); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; padding: 7px 0; }
+  .vf-reset:hover { color: var(--red-hover); }
+  .vf button:focus-visible, .vf input:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; }
+  .vf-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
+  .vf-kpi { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 112px; }
+  .vf-kpi-l { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .vf-kpi-v { font-family: var(--font-display); font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; }
+  .vf-kpi.vf-own .vf-kpi-v { color: var(--red); }
+  .vf-kpi-s { font-size: 12.5px; color: var(--ink-2); }
+  .vf-section { display: flex; flex-direction: column; gap: 14px; }
+  .vf-sh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+  .vf-sh h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 18px; letter-spacing: -.01em; color: var(--ink); }
+  .vf-sh span { color: var(--muted); font-size: 12.5px; }
+  .vf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 16px; }
+  .vf-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 15rem; }
+  .vf-card h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .vf-card-note { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+  .vf-steps { display: flex; flex-direction: column; gap: 10px; }
+  .vf-step { display: flex; flex-direction: column; gap: 5px; }
+  .vf-step-top { display: grid; grid-template-columns: 1fr auto 5.5rem; align-items: baseline; gap: 10px; }
+  .vf-step-name { font-size: 13.5px; color: var(--ink-2); min-width: 0; }
+  .vf-step-n { font-family: var(--font-display); font-size: 15px; font-weight: 600; text-align: right; color: var(--ink); }
+  .vf-step-pct { font-size: 12px; color: var(--muted); text-align: right; font-weight: 500; }
+  .vf-step-pct.vf-over { color: var(--warn); }
+  .vf-step.vf-na .vf-step-name, .vf-step.vf-na .vf-step-n { color: var(--line-strong); }
+  .vf-step.vf-na .vf-step-pct { color: var(--muted); font-weight: 400; }
+  .vf-bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .vf-bar i { display: block; height: 100%; border-radius: 4px; }
+  .vf-total { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12.5px; color: var(--muted); }
+  .vf-total b { color: var(--ink); font-weight: 600; }
+  .vf-fail { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; color: var(--muted); font-size: 12px; }
+  .vf-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--red); }
+  .vf-tablewrap { overflow-x: auto; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); min-height: 12rem; padding: 8px 12px; }
+  .vf-table { border-collapse: collapse; width: 100%; font-size: 13.5px; color: var(--ink); }
+  .vf-table th, .vf-table td { padding: 10px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+  .vf-table th:first-child, .vf-table td:first-child { text-align: left; }
+  .vf-table thead th { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .vf-table thead tr:first-child th { color: var(--ink); font-weight: 600; font-size: 12.5px; }
+  .vf-table .vf-gl { border-left: 1px solid var(--line); }
+  .vf-table tbody tr:last-child td { border-bottom: 0; }
+  .vf-table tr.vf-sum td { font-weight: 600; background: var(--bg); }
+  .vf-table tr.vf-sel td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+  .vf-table small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
+  .vf-chartcard { position: relative; min-height: 18rem; }
+  .vf-chart { position: relative; min-height: 15rem; }
+  .vf-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-2); }
+  .vf-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .vf-tip { position: absolute; pointer-events: none; background: var(--surface); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,35,70,.18); padding: 8px 12px; font-size: 12.5px; color: var(--ink); white-space: nowrap; z-index: 2; }
+  .vf-tip .vf-tip-h { color: var(--muted); margin-bottom: 2px; font-weight: 500; }
+  .vf-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+  .vf-foot { color: var(--muted); font-size: 12px; max-width: 90ch; display: flex; flex-direction: column; gap: 4px; }
+  .vf-foot p { margin: 0; }
+  .vf [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  @media (max-width: 520px) { .vf-card { padding: 18px 16px; } .vf-brand-text { padding-left: 12px; } .vf-logo { width: 52px; height: 38px; } }
+</style>
+
+<div class="vf">
+  <div class="vf-band" id="top">
+    <div class="vf-in">
+      <div class="vf-brand">
+        <span class="vf-logo" role="img" aria-label="BAZA Development"><svg viewBox="0 0 1920 1410" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="#E20617"><path d="M321.26 434.2c60.79-30.35 88.08-91.05 88.08-186.06v-32.99C409.33 72.63 348.55 2.69 207.13 2.69H1.19v923.72h214.62c136.46 0 207.17-76.54 207.17-219.05v-75.22c0-97.65-28.53-167.59-101.72-197.94zM137.66 134.65h65.75c48.38 0 69.47 29.04 69.47 95.01v51.46c0 73.89-31.02 97.65-81.88 97.65h-53.34v-244.13zm148.87 568.75c0 68.62-24.81 91.05-70.71 91.05h-78.16v-283.71h60.79c62.03 0 88.08 26.39 88.08 112.17v80.49zM607.94 2.69l-139.08 923.72h125.42l23.59-167.59h167.64l23.59 167.59h137.84L807.87 2.69h-199.92zm27.32 630.77l65.81-467.14 65.81 467.14h-131.63z"/><polygon points="993.59 134.65 1252.87 134.65 993.59 797.09 993.59 926.41 1393.05 926.41 1393.05 794.46 1133.78 794.46 1393.05 132.01 1393.05 2.69 993.59 2.69 993.59 134.65"/><path d="M1779.58 2.69h-200.15l-139.23 923.72h125.56l23.62-167.59h167.82l23.62 167.59h137.99L1779.58 2.69zm-172.8 630.77l65.89-467.14 65.88 467.14h-131.77zM2.11 1094.71h77.49c48.99 0 73.03 27.17 73.03 77.04v157.65c0 49.88-24.05 77.04-73.03 77.04H2.11v-311.73zm48.99 44.53v222.66h27.61c15.59 0 24.94-8.02 24.94-30.28v-162.1c0-22.27-9.35-30.28-24.94-30.28h-27.61zM232.79 1226.08h67.24v44.53h-67.24v91.29h84.61v44.53h-133.6v-311.73h133.6v44.53h-84.61v86.84zM421.6 1348.99l37.41-254.28h44.98l-48.1 311.73h-73.03l-48.1-311.73h49.43l37.41 254.28zM575.69 1226.08h67.24v44.53h-67.24v91.29h84.61v44.53h-133.6v-311.73h133.6v44.53h-84.61v86.84zM690.58 1094.71h48.99v267.2h80.6v44.53h-129.59v-311.73zM837.53 1169.52c0-49.88 26.27-78.38 74.37-78.38s74.37 28.5 74.37 78.38v162.1c0 49.88-26.27 78.38-74.37 78.38s-74.37-28.5-74.37-78.38v-162.1zm48.99 165.22c0 22.27 9.8 30.73 25.38 30.73s25.38-8.46 25.38-30.73v-168.33c0-22.27-9.8-30.73-25.38-30.73s-25.38 8.46-25.38 30.73v168.33zM1163.07 1171.75v40.52c0 49.88-24.05 77.04-73.03 77.04h-23.16v117.12h-48.99v-311.73h72.14c48.99 0 73.03 27.17 73.03 77.04zm-96.19-32.51v105.54h23.16c15.59 0 24.05-7.13 24.05-29.39v-46.76c0-22.27-8.46-29.39-24.05-29.39h-23.16zM1289.54 1316.04l33.4-221.33h68.14v311.73h-46.31v-223.55l-33.84 223.55h-46.31l-36.52-220.44v220.44h-42.75v-311.73h68.14l36.07 221.33zM1475.68 1226.08h67.24v44.53h-67.24v91.29h84.61v44.53h-133.6v-311.73h133.6v44.53h-84.61v86.84zM1634.22 1180.66v225.78h-44.09v-311.73h61.46l50.32 186.59v-186.59h43.64v311.73h-50.32l-61.01-225.78zM1766.48 1094.71h151.41v44.53h-51.21v267.2h-48.99v-267.2h-51.21v-44.53z"/></g></svg></span>
+        <div class="vf-brand-text">
+          <span class="vf-eyebrow">BAZA Development · Екатеринбург</span>
+          <h1 class="vf-title">Воронка продаж ЕКБ</h1>
+        </div>
+      </div>
+      <div class="vf-proj-tabs" id="vf-proj" role="group" aria-label="Проект ДДУ">
+        <button class="vf-tab" type="button" data-proj="all">Все ДДУ</button>
+        <button class="vf-tab" type="button" data-proj="ДНК">ДНК</button>
+        <button class="vf-tab" type="button" data-proj="ДМД">ДМД</button>
+        <button class="vf-tab" type="button" data-proj="Алиса">Алиса</button>
+      </div>
+    </div>
+  </div>
+  <div class="vf-in">
+  <div class="vf-filters" id="filters">
+    <div class="vf-fgroup">
+      <span class="vf-flabel">Период</span>
+      <div class="vf-dates">
+        <input id="vf-from" type="date" min="2024-01-01" max="2099-12-31" aria-label="С даты">
+        <span aria-hidden="true">–</span>
+        <input id="vf-to" type="date" min="2024-01-01" max="2099-12-31" aria-label="По дату">
+      </div>
+    </div>
+    <div class="vf-fgroup">
+      <span class="vf-flabel">Быстрый выбор</span>
+      <div class="vf-chips" id="vf-presets">
+        <button class="vf-chip" type="button" data-preset="month">Текущий месяц</button>
+        <button class="vf-chip" type="button" data-preset="prevmonth">Прошлый месяц</button>
+        <button class="vf-chip" type="button" data-preset="quarter">Текущий квартал</button>
+        <button class="vf-chip" type="button" data-preset="prevquarter">Прошлый квартал</button>
+        <button class="vf-chip" type="button" data-preset="ytd">С начала года</button>
+        <button class="vf-chip" type="button" data-preset="all">Всё время</button>
+      </div>
+    </div>
+    <button class="vf-reset" type="button" id="vf-reset">Сбросить фильтры</button>
+  </div>
+
+  <p class="vf-take dash-skeleton" id="vf-take" data-source="weekly">—</p>
+
+  <div class="vf-kpis" id="kpis" data-source="weekly">
+    <div class="vf-kpi vf-own"><span class="vf-kpi-l">Договоры ДДУ</span><span class="vf-kpi-v dash-skeleton" id="k-ddu-deals">—</span><span class="vf-kpi-s" id="k-ddu-deals-s"></span></div>
+    <div class="vf-kpi"><span class="vf-kpi-l">Встречи ДДУ</span><span class="vf-kpi-v dash-skeleton" id="k-ddu-meet">—</span><span class="vf-kpi-s" id="k-ddu-meet-s"></span></div>
+    <div class="vf-kpi vf-own"><span class="vf-kpi-l">Договоры ПИФ</span><span class="vf-kpi-v dash-skeleton" id="k-pif-deals">—</span><span class="vf-kpi-s" id="k-pif-deals-s"></span></div>
+    <div class="vf-kpi"><span class="vf-kpi-l">Встречи ПИФ</span><span class="vf-kpi-v dash-skeleton" id="k-pif-meet">—</span><span class="vf-kpi-s" id="k-pif-meet-s"></span></div>
+  </div>
+
+  <section class="vf-section" id="ddu">
+    <div class="vf-sh"><h2 id="vf-ddu-h">ДДУ</h2><span class="vf-period"></span></div>
+    <div class="vf-grid">
+      <article class="vf-card" id="ddu-direct" data-source="weekly targets"></article>
+      <article class="vf-card" id="ddu-agency" data-source="weekly"></article>
+      <article class="vf-card" id="ddu-both" data-source="weekly"></article>
+    </div>
+  </section>
+
+  <section class="vf-section" id="pif">
+    <div class="vf-sh"><h2>ПИФ</h2><span class="vf-period"></span></div>
+    <div class="vf-grid">
+      <article class="vf-card" id="pif-direct" data-source="weekly targets"></article>
+      <article class="vf-card" id="pif-agency" data-source="weekly"></article>
+      <article class="vf-card" id="pif-both" data-source="weekly"></article>
+    </div>
+  </section>
+
+  <section class="vf-section" id="projects">
+    <div class="vf-sh"><h2>По проектам</h2><span>шт · под числом конверсия из предыдущего этапа</span></div>
+    <div class="vf-tablewrap" id="vf-tablewrap" data-source="weekly targets"></div>
+  </section>
+
+  <section class="vf-section" id="months">
+    <div class="vf-sh"><h2>По месяцам</h2><span class="vf-period"></span></div>
+    <div class="vf-card vf-chartcard">
+      <div class="vf-chips" id="vf-stage" role="group" aria-label="Этап">
+        <button class="vf-chip" type="button" data-stage="leads">Лиды (прямой)</button>
+        <button class="vf-chip" type="button" data-stage="qual">Квал. лиды</button>
+        <button class="vf-chip" type="button" data-stage="forms">Цел. формы (агентский)</button>
+        <button class="vf-chip" type="button" data-stage="meetings">Встречи</button>
+        <button class="vf-chip" type="button" data-stage="bookings">Брони</button>
+        <button class="vf-chip" type="button" data-stage="deals">Договоры</button>
+      </div>
+      <div class="vf-legend" id="vf-legend"></div>
+      <div class="vf-chart" id="vf-chart" data-source="weekly"></div>
+    </div>
+  </section>
+
+  <div class="vf-foot" id="about">
+    <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ) и ПИФ; блоки «Прямой канал» и «Агентский канал», недельные колонки «на ДД.ММ». Неделя попадает в период по дате в заголовке колонки. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
+    <p>Целевые лиды есть в таблице только помесячно (раздел «Маркетинг», строка «Количество цел лидов», факт), поэтому показываются, когда период состоит из целых месяцев; текущий месяц считается целым до сегодняшнего дня. Строки «всего форм» в воронке нет.</p>
+  </div>
+  </div>
+</div>
+
+<script>
+  // Turns one sheet's funnel blocks ("ПРЯМОЙ КАНАЛ" / "АГЕНТСКИЙ КАНАЛ") into one row per weekly column.
+  const funnelLoader = ({ answer, args }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error((a && a.error && (a.error.message || String(a.error))) || 'Таблица не вернула значения');
+    const project = String(args.range).split('!')[0].replace(/'/g, '').trim();
+    const MONTHS = ['ЯНВАР', 'ФЕВРАЛ', 'МАРТ', 'АПРЕЛ', 'МАЙ', 'ИЮН', 'ИЮЛ', 'АВГУСТ', 'СЕНТЯБР', 'ОКТЯБР', 'НОЯБР', 'ДЕКАБР'];
+    const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
+    const pad = (n) => String(n).padStart(2, '0');
+    const num = (v) => {
+      if (v === undefined || v === null) return null;
+      const s = String(v).replace(/[\s ]/g, '').replace(',', '.');
+      if (s === '' || s.endsWith('%')) return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    };
+    const rows = a.values;
+    const out = [];
+    rows.forEach((r, i) => {
+      const head = String((r && r[0]) || '').trim().toUpperCase();
+      const channel = head === 'ПРЯМОЙ КАНАЛ' ? 'direct' : head === 'АГЕНТСКИЙ КАНАЛ' ? 'agency' : null;
+      if (!channel) return;
+      const names = channel === 'direct' ? ['leads', 'qual', 'meetings', 'bookings', 'deals'] : ['forms', 'meetings', 'bookings', 'deals'];
+      const hdr = rows[i + 1] || [];
+      const data = rows.slice(i + 2, i + 2 + names.length);
+      let block = null;
+      hdr.forEach((h, j) => {
+        const t = String(h || '').trim();
+        const up = t.toUpperCase();
+        if (/НАКОПИТЕЛЬНО|ИТОГ/.test(up) && !up.startsWith('ФАКТ')) {
+          const m = MONTHS.findIndex((p) => up.startsWith(p));
+          block = m >= 0 ? { m: m + 1, cum: up.includes('ИТОГ') } : null;
+          return;
+        }
+        const w = t.match(/^на (\d{2})\.(\d{2})\.(\d{2,4})/i);
+        if (!w || !block) return;
+        let y = Number(w[3]);
+        if (y < 100) y += 2000;
+        const wm = Number(w[2]);
+        const diff = wm - block.m;
+        const by = diff > 6 ? y + 1 : diff < -6 ? y - 1 : y;
+        const month = by + '-' + pad(block.m);
+        const last = month + '-' + pad(new Date(Date.UTC(by, block.m, 0)).getUTCDate());
+        let date = y + '-' + pad(wm) + '-' + w[1];
+        if (date > last) date = last;
+        if (date < month + '-01') date = month + '-01';
+        const row = { project, channel, month, date, label: t, cum: block.cum };
+        KEYS.forEach((k) => { row[k] = null; });
+        names.forEach((k, s) => { row[k] = num((data[s] || [])[j]); });
+        out.push(row);
+      });
+    });
+    if (!out.length) throw new Error('На листе «' + project + '» не найдены блоки «ПРЯМОЙ КАНАЛ» / «АГЕНТСКИЙ КАНАЛ» с недельными колонками');
+    return { columns: ['project', 'channel', 'month', 'date', 'label', 'cum', ...KEYS], rows: out };
+  };
+
+  // Turns the "МАРКЕТИНГ" section into plan/fact of target leads per month.
+  const marketingLoader = ({ answer, args }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error((a && a.error && (a.error.message || String(a.error))) || 'Таблица не вернула значения');
+    const project = String(args.range).split('!')[0].replace(/'/g, '').trim();
+    const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const pad = (n) => String(n).padStart(2, '0');
+    const num = (v) => {
+      if (v === undefined || v === null) return null;
+      const s = String(v).replace(/[\s ]/g, '').replace(',', '.');
+      if (s === '' || s.endsWith('%')) return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    };
+    const rows = a.values;
+    const cell = (i, j) => String(((rows[i] || [])[j]) ?? '').trim();
+    const start = rows.findIndex((r) => String((r && r[0]) || '').trim().toUpperCase() === 'МАРКЕТИНГ');
+    if (start < 0) throw new Error('На листе «' + project + '» не найден раздел «МАРКЕТИНГ»');
+    const monthOf = (t) => {
+      const m = t.toLowerCase().match(/^([а-яё]+)\s+(\d{2,4})$/);
+      if (!m || !MONTHS.includes(m[1])) return null;
+      let y = Number(m[2]);
+      if (y < 100) y += 2000;
+      return y + '-' + pad(MONTHS.indexOf(m[1]) + 1);
+    };
+    let h = -1;
+    for (let i = start + 1; i < rows.length && h < 0; i++) if ((rows[i] || []).some((c) => monthOf(String(c ?? '').trim()))) h = i;
+    const t = rows.findIndex((r, i) => i > h && String((r && r[0]) || '').trim().toLowerCase().startsWith('количество цел лидов'));
+    if (h < 0 || t < 0) throw new Error('В разделе «МАРКЕТИНГ» листа «' + project + '» не найдена строка «Количество цел лидов»');
+    const out = [];
+    (rows[h] || []).forEach((c, j) => {
+      const month = monthOf(String(c ?? '').trim());
+      if (!month) return;
+      let plan = null, fact = null;
+      for (let k = j; k < j + 3; k++) {
+        if (cell(h + 1, k) === 'План') plan = num((rows[t] || [])[k]);
+        if (cell(h + 1, k) === 'Факт') fact = num((rows[t] || [])[k]);
+      }
+      if (plan !== null || fact !== null) out.push({ project, month, plan, fact });
+    });
+    return { columns: ['project', 'month', 'plan', 'fact'], rows: out };
+  };
+
+  ['f_dnk', 'f_dmd', 'f_alisa', 'f_pif'].forEach((id) => dash.loader(id, {
+    description: 'Значения листа как строки: одна строка на недельную колонку «на ДД.ММ» блоков «Прямой канал» и «Агентский канал»',
+    fn: funnelLoader,
+  }));
+  ['m_dnk', 'm_dmd', 'm_alisa', 'm_pif'].forEach((id) => dash.loader(id, {
+    description: 'Строка «Количество цел лидов» раздела «Маркетинг» как план и факт по месяцам',
+    fn: marketingLoader,
+  }));
+
+  dash.calc('weekly', {
+    title: 'Воронка по неделям, все листы',
+    description: 'Недельные колонки четырёх листов; в месяцах, где колонки накопительные («Май-итог», «Апрель-итог»), берётся прирост к предыдущей неделе.',
+    inputs: ['f_dnk', 'f_dmd', 'f_alisa', 'f_pif'],
+    fn: (f_dnk, f_dmd, f_alisa, f_pif) => {
+      const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
+      const all = [...f_dnk, ...f_dmd, ...f_alisa, ...f_pif].slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      const prev = new Map();
+      return all.map((r) => {
+        const o = { project: r.project, kind: r.project === 'ПИФ' ? 'ПИФ' : 'ДДУ', channel: r.channel, month: r.month, date: r.date };
+        if (r.cum) {
+          const key = r.project + '|' + r.channel + '|' + r.month;
+          const p = prev.get(key) || {};
+          const now = {};
+          KEYS.forEach((k) => {
+            const v = r[k] ?? p[k] ?? null;
+            now[k] = v;
+            o[k] = v === null ? null : v - (p[k] ?? 0);
+          });
+          prev.set(key, now);
+        } else KEYS.forEach((k) => { o[k] = r[k]; });
+        return o;
+      });
+    },
+  });
+
+  dash.calc('targets', {
+    title: 'Целевые лиды по месяцам',
+    description: 'Строки «Количество цел лидов» четырёх листов вместе.',
+    inputs: ['m_dnk', 'm_dmd', 'm_alisa', 'm_pif'],
+    fn: (m_dnk, m_dmd, m_alisa, m_pif) => [...m_dnk, ...m_dmd, ...m_alisa, ...m_pif],
+  });
+</script>
+
+<script>
+  const RU = new Intl.NumberFormat('ru-RU');
+  const PCT = new Intl.NumberFormat('ru-RU', { style: 'percent', maximumFractionDigits: 1 });
+  const MON = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const PROJECTS = ['ДНК', 'ДМД', 'Алиса'];
+  const BRAND = { navy: '#002346', mid: '#6C8DAF', red: '#E20617' };
+  const pad = (n) => String(n).padStart(2, '0');
+  const iso = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const today = () => iso(new Date());
+  const ruDate = (s) => (s ? s.slice(8, 10) + '.' + s.slice(5, 7) + '.' + s.slice(2, 4) : '');
+  const monthLabel = (m) => MON[Number(m.slice(5, 7)) - 1] + ' ' + m.slice(2, 4);
+  const lastDay = (m) => m + '-' + pad(new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate());
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  };
+
+  const presetRange = (name) => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const q = Math.floor(m / 3) * 3;
+    const t = today();
+    if (name === 'month') return [iso(new Date(y, m, 1)), t];
+    if (name === 'prevmonth') return [iso(new Date(y, m - 1, 1)), iso(new Date(y, m, 0))];
+    if (name === 'quarter') return [iso(new Date(y, q, 1)), t];
+    if (name === 'prevquarter') return [iso(new Date(y, q - 3, 1)), iso(new Date(y, q, 0))];
+    if (name === 'all') {
+      const w = dash.data('weekly');
+      const first = w.status === 'ok' && w.data.length ? w.data[0].month + '-01' : '2025-01-01';
+      return [first, t];
+    }
+    return [y + '-01-01', t];
+  };
+  const setDefaults = () => {
+    const [from, to] = presetRange('ytd');
+    dash.setParams({ from, to });
+  };
+  setDefaults();
+
+  const params = () => {
+    const p = dash.params();
+    const [df, dt] = presetRange('ytd');
+    return { from: p.from || df, to: p.to || dt, proj: p.proj || 'all' };
+  };
+
+  // Filters
+  const fromEl = document.getElementById('vf-from');
+  const toEl = document.getElementById('vf-to');
+  const showDates = () => {
+    const p = params();
+    if (fromEl !== document.activeElement) fromEl.value = p.from;
+    if (toEl !== document.activeElement) toEl.value = p.to;
+  };
+  fromEl.addEventListener('change', () => { if (fromEl.value && fromEl.validity.valid) dash.setParams({ from: fromEl.value }); });
+  toEl.addEventListener('change', () => { if (toEl.value && toEl.validity.valid) dash.setParams({ to: toEl.value }); });
+  fromEl.addEventListener('blur', showDates);
+  toEl.addEventListener('blur', showDates);
+  document.getElementById('vf-presets').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-preset]');
+    if (!b) return;
+    const [from, to] = presetRange(b.dataset.preset);
+    dash.setParams({ from, to });
+  });
+  document.getElementById('vf-proj').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-proj]');
+    if (b) dash.setParams({ proj: b.dataset.proj });
+  });
+  document.getElementById('vf-reset').addEventListener('click', () => { dash.resetParams(); setDefaults(); });
+  let stage = 'deals';
+  document.getElementById('vf-stage').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-stage]');
+    if (!b) return;
+    stage = b.dataset.stage;
+    draw();
+  });
+
+  // Aggregation over the weekly rows
+  const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
+  const emptyTot = () => ({ direct: Object.fromEntries(KEYS.map((k) => [k, 0])), agency: Object.fromEntries(KEYS.map((k) => [k, 0])) });
+  const total = (rows, p, match) => {
+    const t = emptyTot();
+    rows.forEach((r) => {
+      if (r.date < p.from || r.date > p.to || !match(r)) return;
+      KEYS.forEach((k) => { if (r[k] !== null && r[k] !== undefined) t[r.channel][k] += r[k]; });
+    });
+    return t;
+  };
+  const monthsIn = (p) => {
+    const out = [];
+    let y = Number(p.from.slice(0, 4));
+    let m = Number(p.from.slice(5, 7));
+    const end = p.to.slice(0, 7);
+    for (let s = y + '-' + pad(m); s <= end; ) {
+      out.push(s);
+      m += 1;
+      if (m > 12) { m = 1; y += 1; }
+      s = y + '-' + pad(m);
+    }
+    return out;
+  };
+  // Target leads only exist per month: available when every month in the period is covered whole
+  const targetSum = (targets, p, match) => {
+    const t = today();
+    const months = monthsIn(p);
+    const whole = months.length > 0 && months.every((m) => p.from <= m + '-01' && p.to >= (lastDay(m) < t ? lastDay(m) : t));
+    if (!whole) return null;
+    let s = 0;
+    let any = false;
+    targets.forEach((r) => {
+      if (months.includes(r.month) && match(r) && r.fact !== null) { s += r.fact; any = true; }
+    });
+    return any ? s : null;
+  };
+  const div = (a, b) => (b ? a / b : null);
+  const pctText = (v) => (v === null ? '' : PCT.format(v));
+
+  // Funnel card
+  const renderCard = (card, title, note, steps, totals, color) => {
+    card.replaceChildren();
+    const head = el('div');
+    head.append(el('h3', null, title));
+    if (note) head.append(el('p', 'vf-card-note', note));
+    card.append(head);
+    const list = el('div', 'vf-steps');
+    const max = Math.max(1, ...steps.map((s) => s.n || 0));
+    steps.forEach((s) => {
+      const row = el('div', 'vf-step' + (s.n === null ? ' vf-na' : ''));
+      const top = el('div', 'vf-step-top');
+      top.append(el('span', 'vf-step-name', s.name));
+      top.append(el('span', 'vf-step-n', s.n === null ? '—' : RU.format(s.n)));
+      const pc = el('span', 'vf-step-pct' + (s.pct !== null && s.pct !== undefined && s.pct > 1 ? ' vf-over' : ''), s.n === null ? s.missing || '' : s.pct === undefined ? 'база' : pctText(s.pct));
+      if (s.pctNote && s.n !== null) pc.title = s.pctNote;
+      top.append(pc);
+      row.append(top);
+      const bar = el('div', 'vf-bar');
+      const fill = el('i');
+      fill.style.width = s.n ? (100 * s.n / max).toFixed(1) + '%' : '0';
+      fill.style.background = color;
+      bar.append(fill);
+      row.append(bar);
+      list.append(row);
+    });
+    card.append(list);
+    const foot = el('div', 'vf-total');
+    totals.forEach(([label, v]) => {
+      const sp = el('span', null, label + ' ');
+      sp.append(el('b', null, v === null ? '—' : pctText(v)));
+      foot.append(sp);
+    });
+    card.append(foot);
+  };
+
+  const directSteps = (d, target) => [
+    { name: 'Всего лидов', n: d.leads },
+    { name: 'Целевых лидов', n: target, pct: target === null ? null : div(target, d.leads), missing: 'нужны целые месяцы' },
+    { name: 'Квал. лидов', n: d.qual, pct: div(d.qual, target ?? d.leads), pctNote: target === null ? 'от всех лидов' : 'от целевых лидов' },
+    { name: 'Встреч', n: d.meetings, pct: div(d.meetings, d.qual) },
+    { name: 'Броней', n: d.bookings, pct: div(d.bookings, d.meetings) },
+    { name: 'Договоров', n: d.deals, pct: div(d.deals, d.bookings) },
+  ];
+  const agencySteps = (a) => [
+    { name: 'Всего форм', n: null, missing: 'нет в воронке' },
+    { name: 'Целевых форм', n: a.forms },
+    { name: 'Встреч', n: a.meetings, pct: div(a.meetings, a.forms) },
+    { name: 'Броней', n: a.bookings, pct: div(a.bookings, a.meetings) },
+    { name: 'Договоров', n: a.deals, pct: div(a.deals, a.bookings) },
+  ];
+  const bothSteps = (d, a) => {
+    const top = d.qual + a.forms;
+    const m = d.meetings + a.meetings;
+    const b = d.bookings + a.bookings;
+    const c = d.deals + a.deals;
+    return [
+      { name: 'Квал. лиды + цел. формы', n: top },
+      { name: 'Встреч', n: m, pct: div(m, top) },
+      { name: 'Броней', n: b, pct: div(b, m) },
+      { name: 'Договоров', n: c, pct: div(c, b) },
+    ];
+  };
+
+  const renderBlock = (prefix, t, target) => {
+    const c = BRAND;
+    const d = t.direct;
+    const a = t.agency;
+    renderCard(document.getElementById(prefix + '-direct'), 'Прямой канал', 'шт · % от предыдущего этапа', directSteps(d, target), [['Лид → договор', div(d.deals, d.leads)], ['Квал → договор', div(d.deals, d.qual)]], c.navy);
+    renderCard(document.getElementById(prefix + '-agency'), 'Агентский канал', 'шт · % от предыдущего этапа', agencySteps(a), [['Цел. форма → договор', div(a.deals, a.forms)]], c.mid);
+    const top = d.qual + a.forms;
+    renderCard(document.getElementById(prefix + '-both'), 'Прямой + агентский', 'вход: квал. лиды прямого канала и целевые формы агентов', bothSteps(d, a), [['Вход → договор', div(d.deals + a.deals, top)], ['Встреча → договор', div(d.deals + a.deals, d.meetings + a.meetings)]], c.red);
+  };
+
+  const renderState = (ids, status) => {
+    ids.forEach((id) => {
+      const e = document.getElementById(id);
+      e.replaceChildren();
+      e.classList.toggle('dash-skeleton', status === 'loading');
+      if (status !== 'loading') e.append(el('div', 'vf-fail', status === 'connect' || status === 'declined' ? 'Нужен доступ к Google Таблицам' : 'Failed to load'));
+    });
+  };
+
+  // Project table
+  const renderTable = (rows, targets, p) => {
+    const wrap = document.getElementById('vf-tablewrap');
+    wrap.replaceChildren();
+    const table = el('table', 'vf-table');
+    const thead = el('thead');
+    const g = el('tr');
+    g.append(el('th', null, ''));
+    const gd = el('th', 'vf-gl', 'Прямой канал'); gd.colSpan = 6; g.append(gd);
+    const ga = el('th', 'vf-gl', 'Агентский канал'); ga.colSpan = 4; ga.style.textAlign = 'right'; g.append(ga);
+    const gb = el('th', 'vf-gl', 'Оба канала'); gb.colSpan = 2; g.append(gb);
+    gd.style.textAlign = 'right';
+    const h = el('tr');
+    ['Проект', 'Лиды', 'Цел. лиды', 'Квал', 'Встречи', 'Брони', 'Договоры', 'Цел. формы', 'Встречи', 'Брони', 'Договоры', 'Договоры', 'Вход → договор'].forEach((name, i) => {
+      h.append(el('th', i === 1 || i === 7 || i === 11 ? 'vf-gl' : null, name));
+    });
+    thead.append(g, h);
+    const tbody = el('tbody');
+    const lines = [
+      ...PROJECTS.map((pr) => ({ name: pr, match: (r) => r.project === pr, sel: p.proj === pr })),
+      { name: 'ДДУ итого', match: (r) => r.project !== 'ПИФ', sum: true, sel: p.proj === 'all' },
+      { name: 'ПИФ', match: (r) => r.project === 'ПИФ' },
+    ];
+    lines.forEach((ln) => {
+      const t = total(rows, p, ln.match);
+      const tg = targetSum(targets, p, ln.match);
+      const d = t.direct;
+      const a = t.agency;
+      const tr = el('tr', (ln.sum ? 'vf-sum' : '') + (ln.sel ? ' vf-sel' : ''));
+      const cell = (n, pct, cls) => {
+        const td = el('td', cls || null, n === null ? '—' : RU.format(n));
+        if (pct !== undefined) td.append(el('small', null, pct === null ? ' ' : pctText(pct)));
+        return td;
+      };
+      tr.append(el('td', null, ln.name));
+      tr.append(cell(d.leads, null, 'vf-gl'));
+      tr.append(cell(tg, tg === null ? null : div(tg, d.leads)));
+      tr.append(cell(d.qual, div(d.qual, tg ?? d.leads)));
+      tr.append(cell(d.meetings, div(d.meetings, d.qual)));
+      tr.append(cell(d.bookings, div(d.bookings, d.meetings)));
+      tr.append(cell(d.deals, div(d.deals, d.bookings)));
+      tr.append(cell(a.forms, null, 'vf-gl'));
+      tr.append(cell(a.meetings, div(a.meetings, a.forms)));
+      tr.append(cell(a.bookings, div(a.bookings, a.meetings)));
+      tr.append(cell(a.deals, div(a.deals, a.bookings)));
+      tr.append(cell(d.deals + a.deals, undefined, 'vf-gl'));
+      tr.append(el('td', null, pctText(div(d.deals + a.deals, d.qual + a.forms)) || '—'));
+      tbody.append(tr);
+    });
+    table.append(thead, tbody);
+    wrap.append(table);
+  };
+
+  // Monthly chart: selected stage, ДДУ (selected project) vs ПИФ
+  const STAGE_NAME = { leads: 'Лиды, прямой канал', qual: 'Квал. лиды, прямой канал', forms: 'Целевые формы, агентский канал', meetings: 'Встречи, оба канала', bookings: 'Брони, оба канала', deals: 'Договоры, оба канала' };
+  const renderChart = (rows, p) => {
+    const box = document.getElementById('vf-chart');
+    box.replaceChildren();
+    const months = monthsIn(p);
+    const dduName = p.proj === 'all' ? 'ДДУ' : p.proj;
+    const series = [
+      { name: dduName, color: BRAND.red, match: (r) => r.project !== 'ПИФ' && (p.proj === 'all' || r.project === p.proj) },
+      { name: 'ПИФ', color: BRAND.navy, match: (r) => r.project === 'ПИФ' },
+    ];
+    const vals = months.map((m) => {
+      const from = p.from > m + '-01' ? p.from : m + '-01';
+      const to = p.to < lastDay(m) ? p.to : lastDay(m);
+      return { m, v: series.map((s) => {
+        let n = 0;
+        rows.forEach((r) => { if (r.date >= from && r.date <= to && s.match(r) && r[stage] !== null) n += r[stage]; });
+        return n;
+      }) };
+    });
+    const legend = document.getElementById('vf-legend');
+    legend.replaceChildren();
+    series.forEach((s) => {
+      const sp = el('span');
+      const sw = el('i');
+      sw.style.background = s.color;
+      sp.append(sw, document.createTextNode(s.name));
+      legend.append(sp);
+    });
+    legend.append(el('span', null, STAGE_NAME[stage]));
+    const W = Math.max(280, box.clientWidth);
+    const H = 240;
+    const maxV = d3.max(vals, (d) => d3.max(d.v)) || 1;
+    const y = d3.scaleLinear([0, maxV], [H - 28, 12]).nice();
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`);
+    const ticks = y.ticks(4);
+    const probe = svg.append('text').attr('font-size', 12).text(RU.format(d3.max(ticks)));
+    const left = Math.ceil(probe.node().getComputedTextLength()) + 10;
+    probe.remove();
+    const x = d3.scaleBand(months, [left, W - 4]).paddingInner(0.25).paddingOuter(0.1);
+    const xi = d3.scaleBand([0, 1], [0, x.bandwidth()]).padding(0.08);
+    svg.append('g').selectAll('line').data(ticks).join('line')
+      .attr('x1', left).attr('x2', W - 4).attr('y1', (d) => y(d)).attr('y2', (d) => y(d))
+      .attr('stroke', 'var(--line)').attr('stroke-width', 1);
+    svg.append('g').selectAll('text').data(ticks).join('text')
+      .attr('x', left - 8).attr('y', (d) => y(d)).attr('dy', '0.32em').attr('text-anchor', 'end')
+      .attr('font-size', 12).attr('fill', 'var(--muted)').text((d) => RU.format(d));
+    const every = Math.ceil(months.length / Math.max(1, Math.floor((W - left) / 52)));
+    svg.append('g').selectAll('text').data(months.filter((_, i) => i % every === 0)).join('text')
+      .attr('x', (m) => x(m) + x.bandwidth() / 2).attr('y', H - 8).attr('text-anchor', 'middle')
+      .attr('font-size', 12).attr('fill', 'var(--muted)').text(monthLabel);
+    const groups = svg.append('g').selectAll('g').data(vals).join('g').attr('transform', (d) => `translate(${x(d.m)},0)`);
+    groups.selectAll('rect').data((d) => d.v.map((v, i) => ({ v, i }))).join('rect')
+      .attr('x', (d) => xi(d.i)).attr('width', xi.bandwidth())
+      .attr('y', (d) => y(d.v)).attr('height', (d) => Math.max(0, y(0) - y(d.v)))
+      .attr('rx', Math.min(4, xi.bandwidth() / 2)).attr('fill', (d) => series[d.i].color);
+    svg.append('line').attr('x1', left).attr('x2', W - 4).attr('y1', y(0)).attr('y2', y(0)).attr('stroke', 'var(--line-strong)');
+    const tip = el('div', 'vf-tip');
+    tip.hidden = true;
+    box.append(tip);
+    groups.append('rect').attr('x', 0).attr('width', x.bandwidth()).attr('y', 0).attr('height', H - 20).attr('fill', 'transparent')
+      .on('pointermove', (event, d) => {
+        tip.replaceChildren(el('div', 'vf-tip-h', monthLabel(d.m)));
+        series.forEach((s, i) => {
+          const line = el('div');
+          const sw = el('i');
+          sw.style.background = s.color;
+          line.append(sw, document.createTextNode(s.name + ': ' + RU.format(d.v[i])));
+          tip.append(line);
+        });
+        tip.hidden = false;
+        const [mx, my] = d3.pointer(event, box);
+        const tw = tip.offsetWidth;
+        tip.style.left = Math.min(Math.max(0, mx + 12), box.clientWidth - tw) + 'px';
+        tip.style.top = Math.max(0, my - 40) + 'px';
+      })
+      .on('pointerleave', () => { tip.hidden = true; });
+  };
+
+  function draw() {
+    const p = params();
+    showDates();
+    document.querySelectorAll('#vf-presets [data-preset]').forEach((b) => {
+      const [f, t] = presetRange(b.dataset.preset);
+      b.setAttribute('aria-pressed', String(f === p.from && t === p.to));
+    });
+    document.querySelectorAll('#vf-proj [data-proj]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.proj === p.proj)));
+    document.querySelectorAll('#vf-stage [data-stage]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.stage === stage)));
+    const period = ruDate(p.from) + ' – ' + ruDate(p.to);
+    document.querySelectorAll('.vf-period').forEach((e) => { e.textContent = period; });
+    document.getElementById('vf-ddu-h').textContent = p.proj === 'all' ? 'ДДУ · ДНК, ДМД, Алиса' : 'ДДУ · ' + p.proj;
+
+    const w = dash.data('weekly');
+    const tg = dash.data('targets');
+    const take = document.getElementById('vf-take');
+    const cards = ['ddu-direct', 'ddu-agency', 'ddu-both', 'pif-direct', 'pif-agency', 'pif-both', 'vf-tablewrap', 'vf-chart'];
+    if (w.status !== 'ok') {
+      renderState(cards, w.status === 'loading' ? 'loading' : w.status);
+      take.classList.toggle('dash-skeleton', w.status === 'loading');
+      take.textContent = w.status === 'loading' ? '—' : '';
+      return;
+    }
+    cards.forEach((id) => document.getElementById(id).classList.remove('dash-skeleton'));
+    take.classList.remove('dash-skeleton');
+    const rows = w.data;
+    const targets = tg.status === 'ok' ? tg.data : [];
+    const dduMatch = (r) => r.project !== 'ПИФ' && (p.proj === 'all' || r.project === p.proj);
+    const pifMatch = (r) => r.project === 'ПИФ';
+    const tDdu = total(rows, p, dduMatch);
+    const tPif = total(rows, p, pifMatch);
+    renderBlock('ddu', tDdu, targetSum(targets, p, dduMatch));
+    renderBlock('pif', tPif, targetSum(targets, p, pifMatch));
+    renderTable(rows, targets, p);
+    renderChart(rows, p);
+    const both = (t, k) => t.direct[k] + t.agency[k];
+    const dduName = p.proj === 'all' ? 'ДДУ' : p.proj;
+    const kpi = (id, label, t, k) => {
+      const v = document.getElementById(id);
+      v.classList.remove('dash-skeleton');
+      v.textContent = RU.format(both(t, k));
+      v.parentElement.querySelector('.vf-kpi-l').textContent = label;
+      document.getElementById(id + '-s').textContent = `прямой ${RU.format(t.direct[k])} · агентский ${RU.format(t.agency[k])}`;
+    };
+    kpi('k-ddu-deals', 'Договоры · ' + dduName, tDdu, 'deals');
+    kpi('k-ddu-meet', 'Встречи · ' + dduName, tDdu, 'meetings');
+    kpi('k-pif-deals', 'Договоры · ПИФ', tPif, 'deals');
+    kpi('k-pif-meet', 'Встречи · ПИФ', tPif, 'meetings');
+    const conv = (t) => pctText(div(both(t, 'deals'), t.direct.qual + t.agency.forms)) || '—';
+    take.textContent = `${period}. Конверсия квал. лидов и целевых форм в договор: ${dduName} — ${conv(tDdu)}, ПИФ — ${conv(tPif)}.`;
+  }
+
+  ['ddu-direct', 'ddu-agency', 'ddu-both', 'pif-direct', 'pif-agency', 'pif-both', 'vf-tablewrap', 'vf-chart'].forEach((id) => document.getElementById(id).classList.add('dash-skeleton'));
+  dash.onData(draw);
+</script>
