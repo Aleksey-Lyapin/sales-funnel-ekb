@@ -1,5 +1,5 @@
 <style>
-  /* Layout: white brand band (BAZA mark, title, project tabs), filter card, KPI strip, ДДУ and ПИФ rows of three funnel cards, project table, monthly chart.
+  /* Layout: white brand band (BAZA mark, title, project tabs), filter card, KPI strip, one row of three funnel cards for the picked project, project table, monthly chart.
      Palette follows baza.bz: navy ink on pale blue ground, white 20px cards, brand red for accents. Single light look on purpose, as on baza.bz. */
   #dash-root { --dash-gutter: 0; }
   .vf {
@@ -19,6 +19,7 @@
     padding-block: 0 40px;
   }
   .vf *, .vf *::before, .vf *::after { box-sizing: border-box; }
+  .vf [hidden] { display: none !important; }
   .vf-in { width: 100%; max-width: 1320px; margin-inline: auto; padding-inline: max(16px, 2vw); display: flex; flex-direction: column; gap: 20px; }
   .vf-band { background: var(--surface); box-shadow: 0 4px 16px rgba(0,35,70,.06); }
   .vf-band .vf-in { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding-block: 14px; }
@@ -109,11 +110,12 @@
           <h1 class="vf-title">Воронка продаж ЕКБ</h1>
         </div>
       </div>
-      <div class="vf-proj-tabs" id="vf-proj" role="group" aria-label="Проект ДДУ">
+      <div class="vf-proj-tabs" id="vf-proj" role="group" aria-label="Проект">
         <button class="vf-tab" type="button" data-proj="all">Все ДДУ</button>
         <button class="vf-tab" type="button" data-proj="ДНК">ДНК</button>
         <button class="vf-tab" type="button" data-proj="ДМД">ДМД</button>
         <button class="vf-tab" type="button" data-proj="Алиса">Алиса</button>
+        <button class="vf-tab" type="button" data-proj="ПИФ">ПИФ</button>
       </div>
     </div>
   </div>
@@ -144,32 +146,23 @@
   <p class="vf-take dash-skeleton" id="vf-take" data-source="weekly">—</p>
 
   <div class="vf-kpis" id="kpis" data-source="weekly">
-    <div class="vf-kpi vf-own"><span class="vf-kpi-l">Договоры ДДУ</span><span class="vf-kpi-v dash-skeleton" id="k-ddu-deals">—</span><span class="vf-kpi-s" id="k-ddu-deals-s"></span></div>
-    <div class="vf-kpi"><span class="vf-kpi-l">Встречи ДДУ</span><span class="vf-kpi-v dash-skeleton" id="k-ddu-meet">—</span><span class="vf-kpi-s" id="k-ddu-meet-s"></span></div>
-    <div class="vf-kpi vf-own"><span class="vf-kpi-l">Договоры ПИФ</span><span class="vf-kpi-v dash-skeleton" id="k-pif-deals">—</span><span class="vf-kpi-s" id="k-pif-deals-s"></span></div>
-    <div class="vf-kpi"><span class="vf-kpi-l">Встречи ПИФ</span><span class="vf-kpi-v dash-skeleton" id="k-pif-meet">—</span><span class="vf-kpi-s" id="k-pif-meet-s"></span></div>
+    <div class="vf-kpi vf-own"><span class="vf-kpi-l">Договоры</span><span class="vf-kpi-v dash-skeleton" id="k-deals">—</span><span class="vf-kpi-s" id="k-deals-s"></span></div>
+    <div class="vf-kpi"><span class="vf-kpi-l">Брони</span><span class="vf-kpi-v dash-skeleton" id="k-book">—</span><span class="vf-kpi-s" id="k-book-s"></span></div>
+    <div class="vf-kpi"><span class="vf-kpi-l">Встречи</span><span class="vf-kpi-v dash-skeleton" id="k-meet">—</span><span class="vf-kpi-s" id="k-meet-s"></span></div>
+    <div class="vf-kpi"><span class="vf-kpi-l">Квал. лиды + цел. формы</span><span class="vf-kpi-v dash-skeleton" id="k-in">—</span><span class="vf-kpi-s" id="k-in-s"></span></div>
   </div>
 
-  <section class="vf-section" id="ddu">
-    <div class="vf-sh"><h2 id="vf-ddu-h">ДДУ</h2><span class="vf-period"></span></div>
+  <section class="vf-section" id="funnel">
+    <div class="vf-sh"><h2 id="vf-scope-h">ДДУ</h2><span class="vf-period"></span></div>
     <div class="vf-grid">
-      <article class="vf-card" id="ddu-direct" data-source="weekly targets"></article>
-      <article class="vf-card" id="ddu-agency" data-source="weekly"></article>
-      <article class="vf-card" id="ddu-both" data-source="weekly"></article>
-    </div>
-  </section>
-
-  <section class="vf-section" id="pif">
-    <div class="vf-sh"><h2>ПИФ</h2><span class="vf-period"></span></div>
-    <div class="vf-grid">
-      <article class="vf-card" id="pif-direct" data-source="weekly targets"></article>
-      <article class="vf-card" id="pif-agency" data-source="weekly"></article>
-      <article class="vf-card" id="pif-both" data-source="weekly"></article>
+      <article class="vf-card" id="f-direct" data-source="weekly targets"></article>
+      <article class="vf-card" id="f-agency" data-source="weekly"></article>
+      <article class="vf-card" id="f-both" data-source="weekly"></article>
     </div>
   </section>
 
   <section class="vf-section" id="projects">
-    <div class="vf-sh"><h2>По проектам</h2><span>шт · под числом конверсия из предыдущего этапа</span></div>
+    <div class="vf-sh"><h2>Проекты ДДУ</h2><span>шт · под числом конверсия из предыдущего этапа</span></div>
     <div class="vf-tablewrap" id="vf-tablewrap" data-source="weekly targets"></div>
   </section>
 
@@ -190,7 +183,7 @@
   </section>
 
   <div class="vf-foot" id="about">
-    <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ) и ПИФ; блоки «Прямой канал» и «Агентский канал», недельные колонки «на ДД.ММ». Неделя попадает в период по дате в заголовке колонки. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
+    <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ, «Все ДДУ» — их сумма) и ПИФ (отдельная вкладка); блоки «Прямой канал» и «Агентский канал», недельные колонки «на ДД.ММ». Неделя попадает в период по дате в заголовке колонки. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
     <p>Целевые лиды есть в таблице только помесячно (раздел «Маркетинг», строка «Количество цел лидов», факт), поэтому показываются, когда период состоит из целых месяцев; текущий месяц считается целым до сегодняшнего дня. Строки «всего форм» в воронке нет.</p>
   </div>
   </div>
@@ -344,6 +337,9 @@
   const MON = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
   const PROJECTS = ['ДНК', 'ДМД', 'Алиса'];
   const BRAND = { navy: '#002346', mid: '#6C8DAF', red: '#E20617' };
+  // The picked tab: «Все ДДУ» is ДНК + ДМД + Алиса, ПИФ stands alone
+  const scopeMatch = (p) => (p.proj === 'all' ? (r) => r.project !== 'ПИФ' : (r) => r.project === p.proj);
+  const scopeName = (p) => (p.proj === 'all' ? 'Все ДДУ' : p.proj);
   const pad = (n) => String(n).padStart(2, '0');
   const iso = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   const today = () => iso(new Date());
@@ -561,7 +557,6 @@
     const lines = [
       ...PROJECTS.map((pr) => ({ name: pr, match: (r) => r.project === pr, sel: p.proj === pr })),
       { name: 'ДДУ итого', match: (r) => r.project !== 'ПИФ', sum: true, sel: p.proj === 'all' },
-      { name: 'ПИФ', match: (r) => r.project === 'ПИФ' },
     ];
     lines.forEach((ln) => {
       const t = total(rows, p, ln.match);
@@ -593,17 +588,13 @@
     wrap.append(table);
   };
 
-  // Monthly chart: selected stage, ДДУ (selected project) vs ПИФ
+  // Monthly chart: selected stage for the picked project
   const STAGE_NAME = { leads: 'Лиды, прямой канал', qual: 'Квал. лиды, прямой канал', forms: 'Целевые формы, агентский канал', meetings: 'Встречи, оба канала', bookings: 'Брони, оба канала', deals: 'Договоры, оба канала' };
   const renderChart = (rows, p) => {
     const box = document.getElementById('vf-chart');
     box.replaceChildren();
     const months = monthsIn(p);
-    const dduName = p.proj === 'all' ? 'ДДУ' : p.proj;
-    const series = [
-      { name: dduName, color: BRAND.red, match: (r) => r.project !== 'ПИФ' && (p.proj === 'all' || r.project === p.proj) },
-      { name: 'ПИФ', color: BRAND.navy, match: (r) => r.project === 'ПИФ' },
-    ];
+    const series = [{ name: scopeName(p), color: p.proj === 'ПИФ' ? BRAND.navy : BRAND.red, match: scopeMatch(p) }];
     const vals = months.map((m) => {
       const from = p.from > m + '-01' ? p.from : m + '-01';
       const to = p.to < lastDay(m) ? p.to : lastDay(m);
@@ -691,12 +682,13 @@
     document.querySelectorAll('#vf-stage [data-stage]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.stage === stage)));
     const period = ruDate(p.from) + ' – ' + ruDate(p.to);
     document.querySelectorAll('.vf-period').forEach((e) => { e.textContent = period; });
-    document.getElementById('vf-ddu-h').textContent = p.proj === 'all' ? 'ДДУ · ДНК, ДМД, Алиса' : 'ДДУ · ' + p.proj;
+    document.getElementById('vf-scope-h').textContent = p.proj === 'all' ? 'Все ДДУ · ДНК, ДМД, Алиса' : p.proj === 'ПИФ' ? 'ПИФ' : 'ДДУ · ' + p.proj;
+    document.getElementById('projects').hidden = p.proj === 'ПИФ';
 
     const w = dash.data('weekly');
     const tg = dash.data('targets');
     const take = document.getElementById('vf-take');
-    const cards = ['ddu-direct', 'ddu-agency', 'ddu-both', 'pif-direct', 'pif-agency', 'pif-both', 'vf-tablewrap', 'vf-chart'];
+    const cards = ['f-direct', 'f-agency', 'f-both', 'vf-tablewrap', 'vf-chart'];
     if (w.status !== 'ok') {
       renderState(cards, w.status === 'loading' ? 'loading' : w.status);
       take.classList.toggle('dash-skeleton', w.status === 'loading');
@@ -707,31 +699,27 @@
     take.classList.remove('dash-skeleton');
     const rows = w.data;
     const targets = tg.status === 'ok' ? tg.data : [];
-    const dduMatch = (r) => r.project !== 'ПИФ' && (p.proj === 'all' || r.project === p.proj);
-    const pifMatch = (r) => r.project === 'ПИФ';
-    const tDdu = total(rows, p, dduMatch);
-    const tPif = total(rows, p, pifMatch);
-    renderBlock('ddu', tDdu, targetSum(targets, p, dduMatch));
-    renderBlock('pif', tPif, targetSum(targets, p, pifMatch));
-    renderTable(rows, targets, p);
+    const match = scopeMatch(p);
+    const t = total(rows, p, match);
+    renderBlock('f', t, targetSum(targets, p, match));
+    if (p.proj !== 'ПИФ') renderTable(rows, targets, p);
     renderChart(rows, p);
-    const both = (t, k) => t.direct[k] + t.agency[k];
-    const dduName = p.proj === 'all' ? 'ДДУ' : p.proj;
-    const kpi = (id, label, t, k) => {
+    const both = (k) => t.direct[k] + t.agency[k];
+    const kpi = (id, value, sub) => {
       const v = document.getElementById(id);
       v.classList.remove('dash-skeleton');
-      v.textContent = RU.format(both(t, k));
-      v.parentElement.querySelector('.vf-kpi-l').textContent = label;
-      document.getElementById(id + '-s').textContent = `прямой ${RU.format(t.direct[k])} · агентский ${RU.format(t.agency[k])}`;
+      v.textContent = RU.format(value);
+      document.getElementById(id + '-s').textContent = sub;
     };
-    kpi('k-ddu-deals', 'Договоры · ' + dduName, tDdu, 'deals');
-    kpi('k-ddu-meet', 'Встречи · ' + dduName, tDdu, 'meetings');
-    kpi('k-pif-deals', 'Договоры · ПИФ', tPif, 'deals');
-    kpi('k-pif-meet', 'Встречи · ПИФ', tPif, 'meetings');
-    const conv = (t) => pctText(div(both(t, 'deals'), t.direct.qual + t.agency.forms)) || '—';
-    take.textContent = `${period}. Конверсия квал. лидов и целевых форм в договор: ${dduName} — ${conv(tDdu)}, ПИФ — ${conv(tPif)}.`;
+    const split = (k) => `прямой ${RU.format(t.direct[k])} · агентский ${RU.format(t.agency[k])}`;
+    kpi('k-deals', both('deals'), split('deals'));
+    kpi('k-book', both('bookings'), split('bookings'));
+    kpi('k-meet', both('meetings'), split('meetings'));
+    kpi('k-in', t.direct.qual + t.agency.forms, `квал. лиды ${RU.format(t.direct.qual)} · цел. формы ${RU.format(t.agency.forms)}`);
+    const conv = pctText(div(both('deals'), t.direct.qual + t.agency.forms)) || '—';
+    take.textContent = `${scopeName(p)}, ${period}. Конверсия квал. лидов и целевых форм в договор — ${conv}.`;
   }
 
-  ['ddu-direct', 'ddu-agency', 'ddu-both', 'pif-direct', 'pif-agency', 'pif-both', 'vf-tablewrap', 'vf-chart'].forEach((id) => document.getElementById(id).classList.add('dash-skeleton'));
+  ['f-direct', 'f-agency', 'f-both', 'vf-tablewrap', 'vf-chart'].forEach((id) => document.getElementById(id).classList.add('dash-skeleton'));
   dash.onData(draw);
 </script>
