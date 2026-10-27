@@ -626,7 +626,7 @@
     const W = Math.max(280, box.clientWidth);
     const H = 240;
     const maxV = d3.max(vals, (d) => d3.max(d.v)) || 1;
-    const y = d3.scaleLinear([0, maxV], [H - 28, 12]).nice();
+    const y = d3.scaleLinear([0, maxV], [H - 28, 24]).nice();
     const svg = d3.select(box).append('svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`);
     const ticks = y.ticks(4);
     const probe = svg.append('text').attr('font-size', 12).text(RU.format(d3.max(ticks)));
@@ -649,6 +649,14 @@
       .attr('x', (d) => xi(d.i)).attr('width', xi.bandwidth())
       .attr('y', (d) => y(d.v)).attr('height', (d) => Math.max(0, y(0) - y(d.v)))
       .attr('rx', Math.min(4, xi.bandwidth() / 2)).attr('fill', (d) => series[d.i].color);
+    // Value above each bar; smaller type when bars get narrow, none at all if any would run into its neighbour (the tooltip still has them)
+    const labelSize = xi.bandwidth() >= 22 ? 12 : xi.bandwidth() >= 14 ? 10 : 9;
+    const showLabels = RU.format(maxV).length * labelSize * 0.62 <= xi.step();
+    groups.selectAll('text.vf-val').data((d) => (showLabels ? d.v.map((v, i) => ({ v, i })).filter((d) => d.v > 0) : [])).join('text')
+      .attr('class', 'vf-val')
+      .attr('x', (d) => xi(d.i) + xi.bandwidth() / 2).attr('y', (d) => y(d.v) - 5)
+      .attr('text-anchor', 'middle').attr('font-size', labelSize).attr('font-weight', 600)
+      .attr('fill', (d) => series[d.i].color).text((d) => RU.format(d.v));
     svg.append('line').attr('x1', left).attr('x2', W - 4).attr('y1', y(0)).attr('y2', y(0)).attr('stroke', 'var(--line-strong)');
     const tip = el('div', 'vf-tip');
     tip.hidden = true;
