@@ -183,7 +183,7 @@
   </section>
 
   <div class="vf-foot" id="about">
-    <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ, «Все ДДУ» — их сумма) и ПИФ (отдельная вкладка); блоки «Прямой канал» и «Агентский канал», недельные колонки «на ДД.ММ». Неделя попадает в период по дате в заголовке колонки. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
+    <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ, «Все ДДУ» — их сумма) и ПИФ (отдельная вкладка); блоки «Прямой канал» и «Агентский канал», колонки «&lt;МЕСЯЦ&gt; Накопительно» и недельные «на ДД.ММ». За целые месяцы цифры берутся из колонки «Накопительно», как в таблице (текущий месяц считается целым до сегодняшнего дня; пустые строки этой колонки — сумма недель). Неполный месяц складывается из недель, которые хотя бы частично попадают в период. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
     <p>Целевые лиды есть в таблице только помесячно (раздел «Маркетинг», строка «Количество цел лидов», факт), поэтому показываются, когда период состоит из целых месяцев; текущий месяц считается целым до сегодняшнего дня. Строки «всего форм» в воронке нет.</p>
   </div>
   </div>
@@ -220,7 +220,8 @@
         const up = t.toUpperCase();
         if (/НАКОПИТЕЛЬНО|ИТОГ/.test(up) && !up.startsWith('ФАКТ')) {
           const m = MONTHS.findIndex((p) => up.startsWith(p));
-          block = m >= 0 ? { m: m + 1, cum: up.includes('ИТОГ') } : null;
+          // The «<МЕСЯЦ> Накопительно» / «<Месяц>-итог» column itself holds the month's totals (its year comes from the first week)
+          block = m >= 0 ? { m: m + 1, cum: up.includes('ИТОГ'), col: j, label: t } : null;
           return;
         }
         const w = t.match(/^на (\d{2})\.(\d{2})\.(\d{2,4})/i);
@@ -235,14 +236,33 @@
         let date = y + '-' + pad(wm) + '-' + w[1];
         if (date > last) date = last;
         if (date < month + '-01') date = month + '-01';
-        const row = { project, channel, month, date, label: t, cum: block.cum };
-        KEYS.forEach((k) => { row[k] = null; });
-        names.forEach((k, s) => { row[k] = num((data[s] || [])[j]); });
-        out.push(row);
+        const push = (kind, col, d, label) => {
+          const row = { project, channel, kind, month, date: d, start: null, label, cum: kind === 'week' && block.cum };
+          KEYS.forEach((k) => { row[k] = null; });
+          names.forEach((k, s) => { row[k] = num((data[s] || [])[col]); });
+          out.push(row);
+        };
+        if (block.col >= 0) {
+          push('month', block.col, last, block.label);
+          block.col = -1;
+        }
+        push('week', j, date, t);
       });
     });
     if (!out.length) throw new Error('На листе «' + project + '» не найдены блоки «ПРЯМОЙ КАНАЛ» / «АГЕНТСКИЙ КАНАЛ» с недельными колонками');
-    return { columns: ['project', 'channel', 'month', 'date', 'label', 'cum', ...KEYS], rows: out };
+    // A week column covers the days after the previous column of its month up to its own date
+    const nextDay = (s) => { const d = new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10) + 1)); return d.toISOString().slice(0, 10); };
+    const groups = new Map();
+    out.forEach((r) => {
+      const key = r.channel + '|' + r.month + '|' + r.kind;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+    groups.forEach((list) => {
+      list.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      list.forEach((r, i) => { r.start = r.kind === 'month' || i === 0 ? r.month + '-01' : nextDay(list[i - 1].date); });
+    });
+    return { columns: ['project', 'channel', 'kind', 'month', 'date', 'start', 'label', 'cum', ...KEYS], rows: out };
   };
 
   // Turns the "МАРКЕТИНГ" section into plan/fact of target leads per month.
@@ -306,7 +326,7 @@
       const all = [...f_dnk, ...f_dmd, ...f_alisa, ...f_pif].slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
       const prev = new Map();
       return all.map((r) => {
-        const o = { project: r.project, kind: r.project === 'ПИФ' ? 'ПИФ' : 'ДДУ', channel: r.channel, month: r.month, date: r.date };
+        const o = { project: r.project, kind: r.kind, channel: r.channel, month: r.month, date: r.date, start: r.start };
         if (r.cum) {
           const key = r.project + '|' + r.channel + '|' + r.month;
           const p = prev.get(key) || {};
@@ -416,11 +436,36 @@
   // Aggregation over the weekly rows
   const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
   const emptyTot = () => ({ direct: Object.fromEntries(KEYS.map((k) => [k, 0])), agency: Object.fromEntries(KEYS.map((k) => [k, 0])) });
+  // A month counts whole when the period covers it to its end (the current month: up to today)
+  const isWhole = (m, p) => {
+    const t = today();
+    return p.from <= m + '-01' && p.to >= (lastDay(m) < t ? lastDay(m) : t);
+  };
+  // Whole months take the sheet's «<МЕСЯЦ> Накопительно» column, as the sheet reports them (leads and
+  // qualified leads there may come from the МАРКЕТИНГ section); stages it leaves empty fall back to the
+  // weekly sum. Other months add every week column that overlaps the period.
   const total = (rows, p, match) => {
     const t = emptyTot();
+    const whole = new Set(monthsIn(p).filter((m) => isWhole(m, p)));
+    const monthly = new Map();
+    const weekly = new Map();
     rows.forEach((r) => {
-      if (r.date < p.from || r.date > p.to || !match(r)) return;
-      KEYS.forEach((k) => { if (r[k] !== null && r[k] !== undefined) t[r.channel][k] += r[k]; });
+      if (!match(r)) return;
+      if (whole.has(r.month)) {
+        const key = r.project + '|' + r.channel + '|' + r.month;
+        const map = r.kind === 'month' ? monthly : weekly;
+        const acc = map.get(key) || {};
+        KEYS.forEach((k) => { if (r[k] !== null && r[k] !== undefined) acc[k] = (acc[k] ?? 0) + r[k]; });
+        map.set(key, acc);
+      } else if (r.kind === 'week' && r.start <= p.to && r.date >= p.from) {
+        KEYS.forEach((k) => { if (r[k] !== null && r[k] !== undefined) t[r.channel][k] += r[k]; });
+      }
+    });
+    new Set([...monthly.keys(), ...weekly.keys()]).forEach((key) => {
+      const ch = key.split('|')[1];
+      const m = monthly.get(key) || {};
+      const w = weekly.get(key) || {};
+      KEYS.forEach((k) => { t[ch][k] += m[k] ?? w[k] ?? 0; });
     });
     return t;
   };
@@ -439,10 +484,8 @@
   };
   // Target leads only exist per month: available when every month in the period is covered whole
   const targetSum = (targets, p, match) => {
-    const t = today();
     const months = monthsIn(p);
-    const whole = months.length > 0 && months.every((m) => p.from <= m + '-01' && p.to >= (lastDay(m) < t ? lastDay(m) : t));
-    if (!whole) return null;
+    if (!months.length || !months.every((m) => isWhole(m, p))) return null;
     let s = 0;
     let any = false;
     targets.forEach((r) => {
@@ -599,9 +642,8 @@
       const from = p.from > m + '-01' ? p.from : m + '-01';
       const to = p.to < lastDay(m) ? p.to : lastDay(m);
       return { m, v: series.map((s) => {
-        let n = 0;
-        rows.forEach((r) => { if (r.date >= from && r.date <= to && s.match(r) && r[stage] !== null) n += r[stage]; });
-        return n;
+        const t = total(rows, { from, to }, s.match);
+        return t.direct[stage] + t.agency[stage];
       }) };
     });
     const legend = document.getElementById('vf-legend');
