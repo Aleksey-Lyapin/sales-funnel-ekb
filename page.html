@@ -170,7 +170,7 @@
     <div class="vf-sh"><h2>По месяцам</h2><span class="vf-period"></span></div>
     <div class="vf-card vf-chartcard">
       <div class="vf-chips" id="vf-stage" role="group" aria-label="Этап">
-        <button class="vf-chip" type="button" data-stage="leads">Лиды (прямой)</button>
+        <button class="vf-chip" type="button" data-stage="leads">Цел. лиды (прямой)</button>
         <button class="vf-chip" type="button" data-stage="qual">Квал. лиды</button>
         <button class="vf-chip" type="button" data-stage="forms">Цел. формы (агентский)</button>
         <button class="vf-chip" type="button" data-stage="meetings">Встречи</button>
@@ -184,7 +184,7 @@
 
   <div class="vf-foot" id="about">
     <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ, «Все ДДУ» — их сумма) и ПИФ (отдельная вкладка); блоки «Прямой канал» и «Агентский канал», колонки «&lt;МЕСЯЦ&gt; Накопительно» и недельные «на ДД.ММ». За целые месяцы цифры берутся из колонки «Накопительно», как в таблице (текущий месяц считается целым до сегодняшнего дня; пустые строки этой колонки — сумма недель). Неполный месяц складывается из недель, которые хотя бы частично попадают в период. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
-    <p>Целевые лиды есть в таблице только помесячно (раздел «Маркетинг», строка «Количество цел лидов», факт), поэтому показываются, когда период состоит из целых месяцев; текущий месяц считается целым до сегодняшнего дня. Строки «всего форм» в воронке нет.</p>
+    <p>Целевые лиды — строка «Количество лидов» прямого канала; за целые месяцы на листах ДМД и Алиса она подтягивается из раздела «Маркетинг» («Количество цел лидов», факт).</p>
   </div>
   </div>
 </div>
@@ -482,17 +482,6 @@
     }
     return out;
   };
-  // Target leads only exist per month: available when every month in the period is covered whole
-  const targetSum = (targets, p, match) => {
-    const months = monthsIn(p);
-    if (!months.length || !months.every((m) => isWhole(m, p))) return null;
-    let s = 0;
-    let any = false;
-    targets.forEach((r) => {
-      if (months.includes(r.month) && match(r) && r.fact !== null) { s += r.fact; any = true; }
-    });
-    return any ? s : null;
-  };
   const div = (a, b) => (b ? a / b : null);
   const pctText = (v) => (v === null ? '' : PCT.format(v));
 
@@ -532,16 +521,15 @@
     card.append(foot);
   };
 
-  const directSteps = (d, target) => [
-    { name: 'Всего лидов', n: d.leads },
-    { name: 'Целевых лидов', n: target, pct: target === null ? null : div(target, d.leads), missing: 'нужны целые месяцы' },
-    { name: 'Квал. лидов', n: d.qual, pct: div(d.qual, target ?? d.leads), pctNote: target === null ? 'от всех лидов' : 'от целевых лидов' },
+  // «Целевых лидов» is the sheet's «Количество лидов» row: for whole months it equals МАРКЕТИНГ «Количество цел лидов»
+  const directSteps = (d) => [
+    { name: 'Целевых лидов', n: d.leads },
+    { name: 'Квал. лидов', n: d.qual, pct: div(d.qual, d.leads) },
     { name: 'Встреч', n: d.meetings, pct: div(d.meetings, d.qual) },
     { name: 'Броней', n: d.bookings, pct: div(d.bookings, d.meetings) },
     { name: 'Договоров', n: d.deals, pct: div(d.deals, d.bookings) },
   ];
   const agencySteps = (a) => [
-    { name: 'Всего форм', n: null, missing: 'нет в воронке' },
     { name: 'Целевых форм', n: a.forms },
     { name: 'Встреч', n: a.meetings, pct: div(a.meetings, a.forms) },
     { name: 'Броней', n: a.bookings, pct: div(a.bookings, a.meetings) },
@@ -560,11 +548,11 @@
     ];
   };
 
-  const renderBlock = (prefix, t, target) => {
+  const renderBlock = (prefix, t) => {
     const c = BRAND;
     const d = t.direct;
     const a = t.agency;
-    renderCard(document.getElementById(prefix + '-direct'), 'Прямой канал', 'шт · % от предыдущего этапа', directSteps(d, target), [['Лид → договор', div(d.deals, d.leads)], ['Квал → договор', div(d.deals, d.qual)]], c.navy);
+    renderCard(document.getElementById(prefix + '-direct'), 'Прямой канал', 'шт · % от предыдущего этапа', directSteps(d), [['Цел. лид → договор', div(d.deals, d.leads)], ['Квал → договор', div(d.deals, d.qual)]], c.navy);
     renderCard(document.getElementById(prefix + '-agency'), 'Агентский канал', 'шт · % от предыдущего этапа', agencySteps(a), [['Цел. форма → договор', div(a.deals, a.forms)]], c.mid);
     const top = d.qual + a.forms;
     renderCard(document.getElementById(prefix + '-both'), 'Прямой + агентский', 'вход: квал. лиды прямого канала и целевые формы агентов', bothSteps(d, a), [['Вход → договор', div(d.deals + a.deals, top)], ['Встреча → договор', div(d.deals + a.deals, d.meetings + a.meetings)]], c.red);
@@ -580,20 +568,20 @@
   };
 
   // Project table
-  const renderTable = (rows, targets, p) => {
+  const renderTable = (rows, p) => {
     const wrap = document.getElementById('vf-tablewrap');
     wrap.replaceChildren();
     const table = el('table', 'vf-table');
     const thead = el('thead');
     const g = el('tr');
     g.append(el('th', null, ''));
-    const gd = el('th', 'vf-gl', 'Прямой канал'); gd.colSpan = 6; g.append(gd);
+    const gd = el('th', 'vf-gl', 'Прямой канал'); gd.colSpan = 5; g.append(gd);
     const ga = el('th', 'vf-gl', 'Агентский канал'); ga.colSpan = 4; ga.style.textAlign = 'right'; g.append(ga);
     const gb = el('th', 'vf-gl', 'Оба канала'); gb.colSpan = 2; g.append(gb);
     gd.style.textAlign = 'right';
     const h = el('tr');
-    ['Проект', 'Лиды', 'Цел. лиды', 'Квал', 'Встречи', 'Брони', 'Договоры', 'Цел. формы', 'Встречи', 'Брони', 'Договоры', 'Договоры', 'Вход → договор'].forEach((name, i) => {
-      h.append(el('th', i === 1 || i === 7 || i === 11 ? 'vf-gl' : null, name));
+    ['Проект', 'Цел. лиды', 'Квал', 'Встречи', 'Брони', 'Договоры', 'Цел. формы', 'Встречи', 'Брони', 'Договоры', 'Договоры', 'Вход → договор'].forEach((name, i) => {
+      h.append(el('th', i === 1 || i === 6 || i === 10 ? 'vf-gl' : null, name));
     });
     thead.append(g, h);
     const tbody = el('tbody');
@@ -603,7 +591,6 @@
     ];
     lines.forEach((ln) => {
       const t = total(rows, p, ln.match);
-      const tg = targetSum(targets, p, ln.match);
       const d = t.direct;
       const a = t.agency;
       const tr = el('tr', (ln.sum ? 'vf-sum' : '') + (ln.sel ? ' vf-sel' : ''));
@@ -614,8 +601,7 @@
       };
       tr.append(el('td', null, ln.name));
       tr.append(cell(d.leads, null, 'vf-gl'));
-      tr.append(cell(tg, tg === null ? null : div(tg, d.leads)));
-      tr.append(cell(d.qual, div(d.qual, tg ?? d.leads)));
+      tr.append(cell(d.qual, div(d.qual, d.leads)));
       tr.append(cell(d.meetings, div(d.meetings, d.qual)));
       tr.append(cell(d.bookings, div(d.bookings, d.meetings)));
       tr.append(cell(d.deals, div(d.deals, d.bookings)));
@@ -632,7 +618,7 @@
   };
 
   // Monthly chart: selected stage for the picked project
-  const STAGE_NAME = { leads: 'Лиды, прямой канал', qual: 'Квал. лиды, прямой канал', forms: 'Целевые формы, агентский канал', meetings: 'Встречи, оба канала', bookings: 'Брони, оба канала', deals: 'Договоры, оба канала' };
+  const STAGE_NAME = { leads: 'Целевые лиды, прямой канал', qual: 'Квал. лиды, прямой канал', forms: 'Целевые формы, агентский канал', meetings: 'Встречи, оба канала', bookings: 'Брони, оба канала', deals: 'Договоры, оба канала' };
   const renderChart = (rows, p) => {
     const box = document.getElementById('vf-chart');
     box.replaceChildren();
@@ -728,7 +714,6 @@
     document.getElementById('projects').hidden = p.proj === 'ПИФ';
 
     const w = dash.data('weekly');
-    const tg = dash.data('targets');
     const take = document.getElementById('vf-take');
     const cards = ['f-direct', 'f-agency', 'f-both', 'vf-tablewrap', 'vf-chart'];
     if (w.status !== 'ok') {
@@ -740,11 +725,10 @@
     cards.forEach((id) => document.getElementById(id).classList.remove('dash-skeleton'));
     take.classList.remove('dash-skeleton');
     const rows = w.data;
-    const targets = tg.status === 'ok' ? tg.data : [];
     const match = scopeMatch(p);
     const t = total(rows, p, match);
-    renderBlock('f', t, targetSum(targets, p, match));
-    if (p.proj !== 'ПИФ') renderTable(rows, targets, p);
+    renderBlock('f', t);
+    if (p.proj !== 'ПИФ') renderTable(rows, p);
     renderChart(rows, p);
     const both = (k) => t.direct[k] + t.agency[k];
     const kpi = (id, value, sub) => {
