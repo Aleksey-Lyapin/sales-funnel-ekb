@@ -23,15 +23,46 @@ SOURCES = {
     "m_dnk": "ДНК!A85:CZ130", "m_dmd": "ДМД!A85:CZ130", "m_alisa": "Алиса!A85:CZ130", "m_pif": "ПИФ!A85:CZ130",
 }
 
+# Sheets are looked up by their permanent sheetId, so renaming a sheet in the book doesn't break the build
+# (2026-11: «ДНК» became «ДНК1»). The range keys above keep the project name: the page reads the project from it.
+SHEET_IDS = {"ДНК": 259010484, "ДМД": 273915972, "Алиса": 472518951, "ПИФ": 88849761}
+
 root = pathlib.Path(__file__).parent
+
+
+def skip(reason):
+    """Keep the live site as it is and finish without a failed run (failed runs send e-mails)."""
+    print(f"::warning::Сайт не обновлён: {reason}")
+    out = os.environ.get("GITHUB_OUTPUT")
+    if out:
+        with open(out, "a", encoding="utf-8") as f:
+            f.write("changed=false\n")
+    sys.exit(0)
+
+
 key = os.environ.get("GOOGLE_SA_KEY")
 creds = (service_account.Credentials.from_service_account_info(json.loads(key)) if key
          else service_account.Credentials.from_service_account_file(os.environ["GOOGLE_SA_FILE"]))
 session = AuthorizedSession(creds.with_scopes(["https://www.googleapis.com/auth/spreadsheets.readonly"]))
+api = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET}"
 
-query = "&".join("ranges=" + urllib.parse.quote(r, safe="") for r in SOURCES.values())
-resp = session.get(f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET}/values:batchGet?{query}", timeout=120)
-resp.raise_for_status()
+try:
+    meta = session.get(api, params={"fields": "sheets.properties(sheetId,title)"}, timeout=120)
+    meta.raise_for_status()
+    titles = {p["properties"]["sheetId"]: p["properties"]["title"] for p in meta.json().get("sheets", [])}
+    missing = [name for name, sid in SHEET_IDS.items() if sid not in titles]
+    if missing:
+        skip("в книге нет листов " + ", ".join(missing) + " (удалены?)")
+    actual = []
+    for rng in SOURCES.values():
+        name, cells = rng.split("!")
+        actual.append("'" + titles[SHEET_IDS[name]].replace("'", "''") + "'!" + cells)
+    print("sheets:", ", ".join(f"{n} → {titles[i]}" for n, i in SHEET_IDS.items()))
+    query = "&".join("ranges=" + urllib.parse.quote(r, safe="") for r in actual)
+    resp = session.get(f"{api}/values:batchGet?{query}", timeout=120)
+    resp.raise_for_status()
+except Exception as e:  # Google API is down or the book changed: try again on the next run
+    skip(f"не удалось прочитать таблицу: {e}")
 ranges = resp.json()["valueRanges"]
 sources = {
     sid: {"args": {"spreadsheetId": SPREADSHEET, "range": rng},
