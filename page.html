@@ -194,7 +194,8 @@
   const funnelLoader = ({ answer, args }) => {
     const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
     if (!a || !Array.isArray(a.values)) throw new Error((a && a.error && (a.error.message || String(a.error))) || 'Таблица не вернула значения');
-    const project = String(args.range).split('!')[0].replace(/'/g, '').trim();
+    // лист «ДНК» в книге переименован в «ДНК1» (1 очередь) — это по-прежнему проект ДНК
+    const project = (s => ({ 'ДНК1': 'ДНК' })[s] || s)(String(args.range).split('!')[0].replace(/'/g, '').trim());
     const MONTHS = ['ЯНВАР', 'ФЕВРАЛ', 'МАРТ', 'АПРЕЛ', 'МАЙ', 'ИЮН', 'ИЮЛ', 'АВГУСТ', 'СЕНТЯБР', 'ОКТЯБР', 'НОЯБР', 'ДЕКАБР'];
     const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
     const pad = (n) => String(n).padStart(2, '0');
@@ -269,7 +270,8 @@
   const marketingLoader = ({ answer, args }) => {
     const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
     if (!a || !Array.isArray(a.values)) throw new Error((a && a.error && (a.error.message || String(a.error))) || 'Таблица не вернула значения');
-    const project = String(args.range).split('!')[0].replace(/'/g, '').trim();
+    // лист «ДНК» в книге переименован в «ДНК1» (1 очередь) — это по-прежнему проект ДНК
+    const project = (s => ({ 'ДНК1': 'ДНК' })[s] || s)(String(args.range).split('!')[0].replace(/'/g, '').trim());
     const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const pad = (n) => String(n).padStart(2, '0');
     const num = (v) => {
