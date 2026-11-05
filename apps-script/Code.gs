@@ -9,11 +9,16 @@
  * Настройка один раз:
  * 1. Вставьте этот код в Code.gs и сохраните.
  * 2. Настройки проекта (шестерёнка) → Свойства скрипта → добавить свойство
- *    GITHUB_TOKEN = токен GitHub с доступом только к репозиторию sales-funnel-ekb
- *    (Contents: Read and write).
+ *    GITHUB_TOKEN = токен GitHub (fine-grained) с доступом только к репозиторию
+ *    sales-funnel-ekb и единственным правом Actions: Read and write.
+ *    Такой токен умеет только запускать сборку, менять код и сайт он не может —
+ *    это важно, потому что свойства скрипта видят все редакторы книги.
  * 3. Выберите функцию install и нажмите «Выполнить», разрешите доступ.
+ *
+ * Скрипт работает на серверах Google, поэтому сайт обновляется и при выключенном компьютере.
  */
 const REPO = 'Aleksey-Lyapin/sales-funnel-ekb';
+const WORKFLOW = 'build.yml';
 const MIN_GAP_MS = 20 * 1000;
 
 function install() {
@@ -40,11 +45,12 @@ function flush() {
     if (!token) throw new Error('Не задано свойство скрипта GITHUB_TOKEN');
     props.deleteProperty('DIRTY');
     props.setProperty('SENT_AT', String(Date.now()));
-    const res = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/dispatches', {
+    // workflow_dispatch: для него достаточно права Actions (repository_dispatch требовал бы права на запись в код)
+    const res = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + WORKFLOW + '/dispatches', {
       method: 'post',
       contentType: 'application/json',
       headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
-      payload: JSON.stringify({ event_type: 'sheet-changed' }),
+      payload: JSON.stringify({ ref: 'main' }),
       muteHttpExceptions: true,
     });
     if (res.getResponseCode() !== 204) {
