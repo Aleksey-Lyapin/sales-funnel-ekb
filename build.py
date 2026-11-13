@@ -19,13 +19,13 @@ SPREADSHEET = "12YedkWCNz3zWORZA5t7f3pjivNq6Z49LeZI1Fuq1cmE"
 SITE_URL = "https://aleksey-lyapin.github.io/sales-funnel-ekb/"
 # Same ids and ranges as the claude.ai dashboard's datasets.
 SOURCES = {
-    "f_dnk": "ДНК!A1:LZ60", "f_dmd": "ДМД!A1:LZ60", "f_alisa": "Алиса!A1:LZ60", "f_pif": "ПИФ!A1:LZ60",
-    "m_dnk": "ДНК!A85:CZ130", "m_dmd": "ДМД!A85:CZ130", "m_alisa": "Алиса!A85:CZ130", "m_pif": "ПИФ!A85:CZ130",
+    "f_dnk": "ДНК1!A1:LZ60", "f_dnk2": "ДНК2!A1:LZ60", "f_dmd": "ДМД!A1:LZ60", "f_alisa": "Алиса!A1:LZ60", "f_pif": "ПИФ!A1:LZ60",
+    "m_dnk": "ДНК1!A85:CZ130", "m_dmd": "ДМД!A85:CZ130", "m_alisa": "Алиса!A85:CZ130", "m_pif": "ПИФ!A85:CZ130",
 }
 
-# Sheets are looked up by their permanent sheetId, so renaming a sheet in the book doesn't break the build
-# (2026-11: «ДНК» became «ДНК1»). The range keys above keep the project name: the page reads the project from it.
-SHEET_IDS = {"ДНК": 259010484, "ДМД": 273915972, "Алиса": 472518951, "ПИФ": 88849761}
+# Sheets are looked up by their permanent sheetId, so renaming a sheet in the book doesn't break the build.
+# The range keys above carry the project name (ДНК1 and ДНК2 are the two phases of ДНК): the page reads it from them.
+SHEET_IDS = {"ДНК1": 259010484, "ДНК2": 1413654757, "ДМД": 273915972, "Алиса": 472518951, "ПИФ": 88849761}
 
 root = pathlib.Path(__file__).parent
 

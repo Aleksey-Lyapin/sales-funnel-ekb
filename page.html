@@ -112,7 +112,8 @@
       </div>
       <div class="vf-proj-tabs" id="vf-proj" role="group" aria-label="Проект">
         <button class="vf-tab" type="button" data-proj="all">Все ДДУ</button>
-        <button class="vf-tab" type="button" data-proj="ДНК">ДНК</button>
+        <button class="vf-tab" type="button" data-proj="ДНК1">ДНК1</button>
+        <button class="vf-tab" type="button" data-proj="ДНК2">ДНК2</button>
         <button class="vf-tab" type="button" data-proj="ДМД">ДМД</button>
         <button class="vf-tab" type="button" data-proj="Алиса">Алиса</button>
         <button class="vf-tab" type="button" data-proj="ПИФ">ПИФ</button>
@@ -185,7 +186,7 @@
   </section>
 
   <div class="vf-foot" id="about">
-    <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ, «Все ДДУ» — их сумма) и ПИФ (отдельная вкладка); блоки «Прямой канал» и «Агентский канал», колонки «&lt;МЕСЯЦ&gt; Накопительно» и недельные «на ДД.ММ». За целые месяцы цифры берутся из колонки «Накопительно», как в таблице (текущий месяц считается целым до сегодняшнего дня; пустые строки этой колонки — сумма недель). Неполный месяц складывается из недель, которые хотя бы частично попадают в период. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
+    <p>Источник: книга «Воронка продаж_Екб», листы ДНК1, ДНК2 (две очереди ДНК), ДМД, Алиса (проекты ДДУ, «Все ДДУ» — их сумма) и ПИФ (отдельная вкладка); блоки «Прямой канал» и «Агентский канал», колонки «&lt;МЕСЯЦ&gt; Накопительно» и недельные «на ДД.ММ». За целые месяцы цифры берутся из колонки «Накопительно», как в таблице (текущий месяц считается целым до сегодняшнего дня; пустые строки этой колонки — сумма недель). Неполный месяц складывается из недель, которые хотя бы частично попадают в период. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
     <p>Целевые лиды — строка «Количество лидов» прямого канала; за целые месяцы на листах ДМД и Алиса она подтягивается из раздела «Маркетинг» («Количество цел лидов», факт). «Всего обращений» и «Всего форм» — новые строки воронки (с ноября 2026); если за период они пустые, а следующий этап заполнен, показывается «не заполнено».</p>
   </div>
   </div>
@@ -196,8 +197,8 @@
   const funnelLoader = ({ answer, args }) => {
     const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
     if (!a || !Array.isArray(a.values)) throw new Error((a && a.error && (a.error.message || String(a.error))) || 'Таблица не вернула значения');
-    // лист «ДНК» в книге переименован в «ДНК1» (1 очередь) — это по-прежнему проект ДНК
-    const project = (s => ({ 'ДНК1': 'ДНК' })[s] || s)(String(args.range).split('!')[0].replace(/'/g, '').trim());
+    // the project is the sheet name: ДНК1 and ДНК2 (the two phases of ДНК), ДМД, Алиса, ПИФ
+    const project = String(args.range).split('!')[0].replace(/'/g, '').trim();
     const MONTHS = ['ЯНВАР', 'ФЕВРАЛ', 'МАРТ', 'АПРЕЛ', 'МАЙ', 'ИЮН', 'ИЮЛ', 'АВГУСТ', 'СЕНТЯБР', 'ОКТЯБР', 'НОЯБР', 'ДЕКАБР'];
     const KEYS = ['contacts', 'leads', 'qual', 'allforms', 'forms', 'meetings', 'bookings', 'deals'];
     // Stage rows are found by their labels in column A (letters only), so rows added to a block don't shift the stages
@@ -286,8 +287,8 @@
   const marketingLoader = ({ answer, args }) => {
     const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
     if (!a || !Array.isArray(a.values)) throw new Error((a && a.error && (a.error.message || String(a.error))) || 'Таблица не вернула значения');
-    // лист «ДНК» в книге переименован в «ДНК1» (1 очередь) — это по-прежнему проект ДНК
-    const project = (s => ({ 'ДНК1': 'ДНК' })[s] || s)(String(args.range).split('!')[0].replace(/'/g, '').trim());
+    // the project is the sheet name: ДНК1 and ДНК2 (the two phases of ДНК), ДМД, Алиса, ПИФ
+    const project = String(args.range).split('!')[0].replace(/'/g, '').trim();
     const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const pad = (n) => String(n).padStart(2, '0');
     const num = (v) => {
@@ -326,7 +327,7 @@
     return { columns: ['project', 'month', 'plan', 'fact'], rows: out };
   };
 
-  ['f_dnk', 'f_dmd', 'f_alisa', 'f_pif'].forEach((id) => dash.loader(id, {
+  ['f_dnk', 'f_dnk2', 'f_dmd', 'f_alisa', 'f_pif'].forEach((id) => dash.loader(id, {
     description: 'Значения листа как строки: одна строка на недельную колонку «на ДД.ММ» блоков «Прямой канал» и «Агентский канал»',
     fn: funnelLoader,
   }));
@@ -338,10 +339,10 @@
   dash.calc('weekly', {
     title: 'Воронка по неделям, все листы',
     description: 'Недельные колонки четырёх листов; в месяцах, где колонки накопительные («Май-итог», «Апрель-итог»), берётся прирост к предыдущей неделе.',
-    inputs: ['f_dnk', 'f_dmd', 'f_alisa', 'f_pif'],
-    fn: (f_dnk, f_dmd, f_alisa, f_pif) => {
+    inputs: ['f_dnk', 'f_dnk2', 'f_dmd', 'f_alisa', 'f_pif'],
+    fn: (f_dnk, f_dnk2, f_dmd, f_alisa, f_pif) => {
       const KEYS = ['contacts', 'leads', 'qual', 'allforms', 'forms', 'meetings', 'bookings', 'deals'];
-      const all = [...f_dnk, ...f_dmd, ...f_alisa, ...f_pif].slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      const all = [...f_dnk, ...f_dnk2, ...f_dmd, ...f_alisa, ...f_pif].slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
       const prev = new Map();
       return all.map((r) => {
         const o = { project: r.project, kind: r.kind, channel: r.channel, month: r.month, date: r.date, start: r.start };
@@ -373,9 +374,9 @@
   const RU = new Intl.NumberFormat('ru-RU');
   const PCT = new Intl.NumberFormat('ru-RU', { style: 'percent', maximumFractionDigits: 1 });
   const MON = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-  const PROJECTS = ['ДНК', 'ДМД', 'Алиса'];
+  const PROJECTS = ['ДНК1', 'ДНК2', 'ДМД', 'Алиса'];
   const BRAND = { navy: '#002346', mid: '#6C8DAF', red: '#E20617' };
-  // The picked tab: «Все ДДУ» is ДНК + ДМД + Алиса, ПИФ stands alone
+  // The picked tab: «Все ДДУ» is ДНК1 + ДНК2 + ДМД + Алиса, ПИФ stands alone
   const scopeMatch = (p) => (p.proj === 'all' ? (r) => r.project !== 'ПИФ' : (r) => r.project === p.proj);
   const scopeName = (p) => (p.proj === 'all' ? 'Все ДДУ' : p.proj);
   const pad = (n) => String(n).padStart(2, '0');
@@ -754,7 +755,7 @@
     document.querySelectorAll('#vf-stage [data-stage]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.stage === stage)));
     const period = ruDate(p.from) + ' – ' + ruDate(p.to);
     document.querySelectorAll('.vf-period').forEach((e) => { e.textContent = period; });
-    document.getElementById('vf-scope-h').textContent = p.proj === 'all' ? 'Все ДДУ · ДНК, ДМД, Алиса' : p.proj === 'ПИФ' ? 'ПИФ' : 'ДДУ · ' + p.proj;
+    document.getElementById('vf-scope-h').textContent = p.proj === 'all' ? 'Все ДДУ · ДНК1, ДНК2, ДМД, Алиса' : p.proj === 'ПИФ' ? 'ПИФ' : 'ДДУ · ' + p.proj;
     document.getElementById('projects').hidden = p.proj === 'ПИФ';
 
     const w = dash.data('weekly');
