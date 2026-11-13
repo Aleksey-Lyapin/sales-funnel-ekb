@@ -170,8 +170,10 @@
     <div class="vf-sh"><h2>По месяцам</h2><span class="vf-period"></span></div>
     <div class="vf-card vf-chartcard">
       <div class="vf-chips" id="vf-stage" role="group" aria-label="Этап">
+        <button class="vf-chip" type="button" data-stage="contacts">Обращения (прямой)</button>
         <button class="vf-chip" type="button" data-stage="leads">Цел. лиды (прямой)</button>
         <button class="vf-chip" type="button" data-stage="qual">Квал. лиды</button>
+        <button class="vf-chip" type="button" data-stage="allforms">Все формы (агентский)</button>
         <button class="vf-chip" type="button" data-stage="forms">Цел. формы (агентский)</button>
         <button class="vf-chip" type="button" data-stage="meetings">Встречи</button>
         <button class="vf-chip" type="button" data-stage="bookings">Брони</button>
@@ -184,7 +186,7 @@
 
   <div class="vf-foot" id="about">
     <p>Источник: книга «Воронка продаж_Екб», листы ДНК, ДМД, Алиса (проекты ДДУ, «Все ДДУ» — их сумма) и ПИФ (отдельная вкладка); блоки «Прямой канал» и «Агентский канал», колонки «&lt;МЕСЯЦ&gt; Накопительно» и недельные «на ДД.ММ». За целые месяцы цифры берутся из колонки «Накопительно», как в таблице (текущий месяц считается целым до сегодняшнего дня; пустые строки этой колонки — сумма недель). Неполный месяц складывается из недель, которые хотя бы частично попадают в период. Встречи, брони и договоры — сумма прямого и агентского канала там, где указано «прямой + агентский».</p>
-    <p>Целевые лиды — строка «Количество лидов» прямого канала; за целые месяцы на листах ДМД и Алиса она подтягивается из раздела «Маркетинг» («Количество цел лидов», факт).</p>
+    <p>Целевые лиды — строка «Количество лидов» прямого канала; за целые месяцы на листах ДМД и Алиса она подтягивается из раздела «Маркетинг» («Количество цел лидов», факт). «Всего обращений» и «Всего форм» — новые строки воронки (с ноября 2026); если за период они пустые, а следующий этап заполнен, показывается «не заполнено».</p>
   </div>
   </div>
 </div>
@@ -197,7 +199,13 @@
     // лист «ДНК» в книге переименован в «ДНК1» (1 очередь) — это по-прежнему проект ДНК
     const project = (s => ({ 'ДНК1': 'ДНК' })[s] || s)(String(args.range).split('!')[0].replace(/'/g, '').trim());
     const MONTHS = ['ЯНВАР', 'ФЕВРАЛ', 'МАРТ', 'АПРЕЛ', 'МАЙ', 'ИЮН', 'ИЮЛ', 'АВГУСТ', 'СЕНТЯБР', 'ОКТЯБР', 'НОЯБР', 'ДЕКАБР'];
-    const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
+    const KEYS = ['contacts', 'leads', 'qual', 'allforms', 'forms', 'meetings', 'bookings', 'deals'];
+    // Stage rows are found by their labels in column A (letters only), so rows added to a block don't shift the stages
+    const STAGES = {
+      direct: { 'всегообращений': 'contacts', 'количестволидов': 'leads', 'лидквалйлид': 'qual', 'квалйлидвстреча': 'meetings', 'встречабронь': 'bookings', 'броньдоговор': 'deals' },
+      agency: { 'всегоформ': 'allforms', 'количествоцелевыхформ': 'forms', 'целеваяформавстреча': 'meetings', 'встречабронь': 'bookings', 'броньдоговор': 'deals' },
+    };
+    const REQUIRED = { direct: ['leads', 'qual', 'meetings', 'bookings', 'deals'], agency: ['forms', 'meetings', 'bookings', 'deals'] };
     const pad = (n) => String(n).padStart(2, '0');
     const num = (v) => {
       if (v === undefined || v === null) return null;
@@ -212,9 +220,17 @@
       const head = String((r && r[0]) || '').trim().toUpperCase();
       const channel = head === 'ПРЯМОЙ КАНАЛ' ? 'direct' : head === 'АГЕНТСКИЙ КАНАЛ' ? 'agency' : null;
       if (!channel) return;
-      const names = channel === 'direct' ? ['leads', 'qual', 'meetings', 'bookings', 'deals'] : ['forms', 'meetings', 'bookings', 'deals'];
       const hdr = rows[i + 1] || [];
-      const data = rows.slice(i + 2, i + 2 + names.length);
+      // stage key -> its row, from the rows under the header up to «Прогноз ДДУ» or an empty label
+      const data = {};
+      for (let k = i + 2; k < rows.length && k < i + 16; k++) {
+        const label = String((rows[k] && rows[k][0]) || '').toLowerCase().replace(/ё/g, 'е').replace(/[^а-яa-z]/g, '');
+        if (!label || label.startsWith('прогноз')) break;
+        const key = STAGES[channel][label];
+        if (key && !data[key]) data[key] = rows[k];
+      }
+      const lost = REQUIRED[channel].filter((k) => !data[k]);
+      if (lost.length) throw new Error('На листе «' + project + '» в блоке «' + head + '» не найдены строки этапов: ' + lost.join(', '));
       let block = null;
       hdr.forEach((h, j) => {
         const t = String(h || '').trim();
@@ -240,7 +256,7 @@
         const push = (kind, col, d, label) => {
           const row = { project, channel, kind, month, date: d, start: null, label, cum: kind === 'week' && block.cum };
           KEYS.forEach((k) => { row[k] = null; });
-          names.forEach((k, s) => { row[k] = num((data[s] || [])[col]); });
+          Object.keys(data).forEach((k) => { row[k] = num(data[k][col]); });
           out.push(row);
         };
         if (block.col >= 0) {
@@ -324,7 +340,7 @@
     description: 'Недельные колонки четырёх листов; в месяцах, где колонки накопительные («Май-итог», «Апрель-итог»), берётся прирост к предыдущей неделе.',
     inputs: ['f_dnk', 'f_dmd', 'f_alisa', 'f_pif'],
     fn: (f_dnk, f_dmd, f_alisa, f_pif) => {
-      const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
+      const KEYS = ['contacts', 'leads', 'qual', 'allforms', 'forms', 'meetings', 'bookings', 'deals'];
       const all = [...f_dnk, ...f_dmd, ...f_alisa, ...f_pif].slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
       const prev = new Map();
       return all.map((r) => {
@@ -436,7 +452,7 @@
   });
 
   // Aggregation over the weekly rows
-  const KEYS = ['leads', 'qual', 'forms', 'meetings', 'bookings', 'deals'];
+  const KEYS = ['contacts', 'leads', 'qual', 'allforms', 'forms', 'meetings', 'bookings', 'deals'];
   const emptyTot = () => ({ direct: Object.fromEntries(KEYS.map((k) => [k, 0])), agency: Object.fromEntries(KEYS.map((k) => [k, 0])) });
   // A month counts whole when the period covers it to its end (the current month: up to today)
   const isWhole = (m, p) => {
@@ -523,27 +539,47 @@
     card.append(foot);
   };
 
+  // «Всего обращений» / «Всего форм» were added to the sheet in November 2026 and are not filled for earlier weeks:
+  // a zero there while the next stage has numbers means «not filled», shown as a dash rather than 0
+  const filled = (n, next) => (n > 0 || !next ? n : null);
+  const UNFILLED = 'не заполнено';
   // «Целевых лидов» is the sheet's «Количество лидов» row: for whole months it equals МАРКЕТИНГ «Количество цел лидов»
-  const directSteps = (d) => [
-    { name: 'Целевых лидов', n: d.leads },
-    { name: 'Квал. лидов', n: d.qual, pct: div(d.qual, d.leads) },
-    { name: 'Встреч', n: d.meetings, pct: div(d.meetings, d.qual) },
-    { name: 'Броней', n: d.bookings, pct: div(d.bookings, d.meetings) },
-    { name: 'Договоров', n: d.deals, pct: div(d.deals, d.bookings) },
-  ];
-  const agencySteps = (a) => [
-    { name: 'Целевых форм', n: a.forms },
-    { name: 'Встреч', n: a.meetings, pct: div(a.meetings, a.forms) },
-    { name: 'Броней', n: a.bookings, pct: div(a.bookings, a.meetings) },
-    { name: 'Договоров', n: a.deals, pct: div(a.deals, a.bookings) },
-  ];
+  const directSteps = (d) => {
+    const all = filled(d.contacts, d.leads);
+    return [
+      { name: 'Всего обращений', n: all, missing: UNFILLED },
+      { name: 'Целевых лидов', n: d.leads, pct: all === null ? undefined : div(d.leads, all) },
+      { name: 'Квал. лидов', n: d.qual, pct: div(d.qual, d.leads) },
+      { name: 'Встреч', n: d.meetings, pct: div(d.meetings, d.qual) },
+      { name: 'Броней', n: d.bookings, pct: div(d.bookings, d.meetings) },
+      { name: 'Договоров', n: d.deals, pct: div(d.deals, d.bookings) },
+    ];
+  };
+  const agencySteps = (a) => {
+    const all = filled(a.allforms, a.forms);
+    return [
+      { name: 'Всего форм', n: all, missing: UNFILLED },
+      { name: 'Целевых форм', n: a.forms, pct: all === null ? undefined : div(a.forms, all) },
+      { name: 'Встреч', n: a.meetings, pct: div(a.meetings, a.forms) },
+      { name: 'Броней', n: a.bookings, pct: div(a.bookings, a.meetings) },
+      { name: 'Договоров', n: a.deals, pct: div(a.deals, a.bookings) },
+    ];
+  };
+  // Both channels: all contacts + all forms (only when both are filled), then qualified leads + target forms
+  const bothAll = (d, a) => {
+    const c = filled(d.contacts, d.leads);
+    const f = filled(a.allforms, a.forms);
+    return c === null || f === null ? null : c + f;
+  };
   const bothSteps = (d, a) => {
+    const all = bothAll(d, a);
     const top = d.qual + a.forms;
     const m = d.meetings + a.meetings;
     const b = d.bookings + a.bookings;
     const c = d.deals + a.deals;
     return [
-      { name: 'Квал. лиды + цел. формы', n: top },
+      { name: 'Обращения + все формы', n: all, missing: UNFILLED },
+      { name: 'Квал. лиды + цел. формы', n: top, pct: all === null ? undefined : div(top, all) },
       { name: 'Встреч', n: m, pct: div(m, top) },
       { name: 'Броней', n: b, pct: div(b, m) },
       { name: 'Договоров', n: c, pct: div(c, b) },
@@ -554,8 +590,10 @@
     const c = BRAND;
     const d = t.direct;
     const a = t.agency;
-    renderCard(document.getElementById(prefix + '-direct'), 'Прямой канал', 'шт · % от предыдущего этапа', directSteps(d), [['Цел. лид → договор', div(d.deals, d.leads)], ['Квал → договор', div(d.deals, d.qual)]], c.navy);
-    renderCard(document.getElementById(prefix + '-agency'), 'Агентский канал', 'шт · % от предыдущего этапа', agencySteps(a), [['Цел. форма → договор', div(a.deals, a.forms)]], c.mid);
+    const dAll = filled(d.contacts, d.leads);
+    const aAll = filled(a.allforms, a.forms);
+    renderCard(document.getElementById(prefix + '-direct'), 'Прямой канал', 'шт · % от предыдущего этапа', directSteps(d), [['Обращение → договор', dAll === null ? null : div(d.deals, dAll)], ['Цел. лид → договор', div(d.deals, d.leads)], ['Квал → договор', div(d.deals, d.qual)]], c.navy);
+    renderCard(document.getElementById(prefix + '-agency'), 'Агентский канал', 'шт · % от предыдущего этапа', agencySteps(a), [['Форма → договор', aAll === null ? null : div(a.deals, aAll)], ['Цел. форма → договор', div(a.deals, a.forms)]], c.mid);
     const top = d.qual + a.forms;
     renderCard(document.getElementById(prefix + '-both'), 'Прямой + агентский', 'вход: квал. лиды прямого канала и целевые формы агентов', bothSteps(d, a), [['Вход → договор', div(d.deals + a.deals, top)], ['Встреча → договор', div(d.deals + a.deals, d.meetings + a.meetings)]], c.red);
   };
@@ -577,13 +615,13 @@
     const thead = el('thead');
     const g = el('tr');
     g.append(el('th', null, ''));
-    const gd = el('th', 'vf-gl', 'Прямой канал'); gd.colSpan = 5; g.append(gd);
-    const ga = el('th', 'vf-gl', 'Агентский канал'); ga.colSpan = 4; ga.style.textAlign = 'right'; g.append(ga);
+    const gd = el('th', 'vf-gl', 'Прямой канал'); gd.colSpan = 6; g.append(gd);
+    const ga = el('th', 'vf-gl', 'Агентский канал'); ga.colSpan = 5; ga.style.textAlign = 'right'; g.append(ga);
     const gb = el('th', 'vf-gl', 'Оба канала'); gb.colSpan = 2; g.append(gb);
     gd.style.textAlign = 'right';
     const h = el('tr');
-    ['Проект', 'Цел. лиды', 'Квал', 'Встречи', 'Брони', 'Договоры', 'Цел. формы', 'Встречи', 'Брони', 'Договоры', 'Договоры', 'Вход → договор'].forEach((name, i) => {
-      h.append(el('th', i === 1 || i === 6 || i === 10 ? 'vf-gl' : null, name));
+    ['Проект', 'Обращения', 'Цел. лиды', 'Квал', 'Встречи', 'Брони', 'Договоры', 'Все формы', 'Цел. формы', 'Встречи', 'Брони', 'Договоры', 'Договоры', 'Вход → договор'].forEach((name, i) => {
+      h.append(el('th', i === 1 || i === 7 || i === 12 ? 'vf-gl' : null, name));
     });
     thead.append(g, h);
     const tbody = el('tbody');
@@ -601,13 +639,17 @@
         if (pct !== undefined) td.append(el('small', null, pct === null ? ' ' : pctText(pct)));
         return td;
       };
+      const dAll = filled(d.contacts, d.leads);
+      const aAll = filled(a.allforms, a.forms);
       tr.append(el('td', null, ln.name));
-      tr.append(cell(d.leads, null, 'vf-gl'));
+      tr.append(cell(dAll, null, 'vf-gl'));
+      tr.append(cell(d.leads, dAll === null ? null : div(d.leads, dAll)));
       tr.append(cell(d.qual, div(d.qual, d.leads)));
       tr.append(cell(d.meetings, div(d.meetings, d.qual)));
       tr.append(cell(d.bookings, div(d.bookings, d.meetings)));
       tr.append(cell(d.deals, div(d.deals, d.bookings)));
-      tr.append(cell(a.forms, null, 'vf-gl'));
+      tr.append(cell(aAll, null, 'vf-gl'));
+      tr.append(cell(a.forms, aAll === null ? null : div(a.forms, aAll)));
       tr.append(cell(a.meetings, div(a.meetings, a.forms)));
       tr.append(cell(a.bookings, div(a.bookings, a.meetings)));
       tr.append(cell(a.deals, div(a.deals, a.bookings)));
@@ -620,7 +662,7 @@
   };
 
   // Monthly chart: selected stage for the picked project
-  const STAGE_NAME = { leads: 'Целевые лиды, прямой канал', qual: 'Квал. лиды, прямой канал', forms: 'Целевые формы, агентский канал', meetings: 'Встречи, оба канала', bookings: 'Брони, оба канала', deals: 'Договоры, оба канала' };
+  const STAGE_NAME = { contacts: 'Всего обращений, прямой канал', allforms: 'Всего форм, агентский канал', leads: 'Целевые лиды, прямой канал', qual: 'Квал. лиды, прямой канал', forms: 'Целевые формы, агентский канал', meetings: 'Встречи, оба канала', bookings: 'Брони, оба канала', deals: 'Договоры, оба канала' };
   const renderChart = (rows, p) => {
     const box = document.getElementById('vf-chart');
     box.replaceChildren();
